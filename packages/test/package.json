@@ -1,6 +1,6 @@
 {
-  "name": "@cilly/test",
-  "version": "0.0.3",
+  "name": "test",
+  "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -18,9 +18,7 @@
     "!**/*.tsbuildinfo"
   ],
   "dependencies": {
+    "fs-extra": "^11.3.0",
     "tslib": "^2.3.0"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

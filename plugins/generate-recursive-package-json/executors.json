@@ -1,0 +1,9 @@
+{
+  "executors": {
+    "generate-recursive-package-json": {
+      "implementation": "./dist/executors/executor",
+      "schema": "./dist/executors/schema.json",
+      "description": "generate-recursive-package-json executor"
+    }
+  }
+}

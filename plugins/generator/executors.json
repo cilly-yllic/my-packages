@@ -1,0 +1,14 @@
+{
+  "executors": {
+    "package-jsons": {
+      "implementation": "./dist/executors/package-jsons/executor",
+      "schema": "./dist/executors/package-jsons/schema.json",
+      "description": "package-jsons executor"
+    },
+    "build": {
+      "implementation": "./dist/executors/build/executor",
+      "schema": "./dist/executors/build/schema.json",
+      "description": "build executor"
+    }
+  }
+}

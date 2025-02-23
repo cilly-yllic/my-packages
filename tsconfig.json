@@ -4,10 +4,16 @@
   "files": [],
   "references": [
     {
+      "path": "./packages/test"
+    },
+    {
+      "path": "./plugins/generate-recursive-package-json"
+    },
+    {
       "path": "./packages/my-gadgetry"
     },
     {
-      "path": "./packages/test"
+      "path": "./plugins/generator"
     }
   ]
 }

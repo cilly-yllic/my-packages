@@ -1,9 +1,27 @@
 {
-  "name": "test",
+  "name": "@my-packages/test",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/test/src",
   "projectType": "library",
   "tags": [],
   "// targets": "to see all targets run: nx show project @my-packages/test --web",
-  "targets": {}
+  "targets": {
+    "echo": {
+      "executor": "@my-packages/my-plugin:echo",
+      "options": {
+        "textToEcho": "Hello World"
+      }
+    },
+    "generate-recursive-package-json": {
+      "options": {
+        "textToEcho": "Hello World"
+      }
+    },
+    "replace-aliases": {},
+    "build": {
+      "dependsOn": ["replace-aliases", "package-jsons"]
+    },
+    "generator": {},
+    "package-jsons": {}
+  }
 }

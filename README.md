@@ -8,7 +8,7 @@
 
 ## Finish your CI setup
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/7nUFTLduaw)
+[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/y5nFSqrPDh)
 
 
 ## Generate a library

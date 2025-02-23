@@ -12,7 +12,7 @@
     ],
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
   },
-  "nxCloudId": "67a75e216e288e7baa73ff49",
+  "nxCloudId": "67ab16889e5dfe5ac6cfc60f",
   "plugins": [
     {
       "plugin": "@nx/js/typescript",
@@ -52,12 +52,31 @@
   "release": {
     "version": {
       "preVersionCommand": "npx nx run-many -t build"
-    },
-    "projectsRelationship": "independent"
+    }
   },
   "targetDefaults": {
     "test": {
-      "dependsOn": ["^build", "^build"]
+      "dependsOn": [
+        "^build",
+        "^build"
+      ]
+    },
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    },
+    "generator": {
+      "executor": "@my-packages/generator:build"
+    },
+    "package-jsons": {
+      "executor": "@my-packages/generator:package-jsons"
+    },
+    "replace-aliases": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc-alias -p '{projectRoot}/tsconfig.lib.json'"
+      }
     }
   }
 }

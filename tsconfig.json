@@ -7,9 +7,6 @@
       "path": "./packages/test"
     },
     {
-      "path": "./plugins/generate-recursive-package-json"
-    },
-    {
       "path": "./packages/my-gadgetry"
     },
     {

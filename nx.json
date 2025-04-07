@@ -62,6 +62,18 @@
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
+    },
+    "replace-aliases": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc-alias -p '{projectRoot}/tsconfig.lib.json'"
+      }
+    },
+    "output": {
+      "executor": "builder:output"
+    },
+    "generator": {
+      "executor": "builder:generator"
     }
   }
 }

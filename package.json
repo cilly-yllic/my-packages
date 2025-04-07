@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "release": " npx nx release --projects=${npm_config_name}",
     "build": "nx run-many --target=output --all",
     "exec:i": "npx nx exec --cwd=packages/${npm_config_name} -- npm install",
     "add:library": "npx nx g @nx/js:lib --directory=packages/${npm_config_name} --bundler=tsc --importPath=${npm_config_name} --linter=eslint --name=${npm_config_name} --publishable --unitTestRunner=vitest --strict --useProjectJson --config=project --buildable --testEnvironment=node",

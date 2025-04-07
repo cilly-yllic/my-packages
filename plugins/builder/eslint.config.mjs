@@ -20,7 +20,7 @@ export default [
     },
   },
   {
-    files: ['**/package.json'],
+    files: ['**/package.json', '**/package.json', '**/executors.json'],
     rules: {
       '@nx/nx-plugin-checks': 'error',
     },

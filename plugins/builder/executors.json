@@ -1,0 +1,9 @@
+{
+  "executors": {
+    "output": {
+      "implementation": "./dist/executors/output/executor",
+      "schema": "./dist/executors/output/schema.json",
+      "description": "output executor"
+    }
+  }
+}

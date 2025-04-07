@@ -4,6 +4,11 @@
       "implementation": "./dist/executors/output/executor",
       "schema": "./dist/executors/output/schema.json",
       "description": "output executor"
+    },
+    "generator": {
+      "implementation": "./dist/executors/generator/executor",
+      "schema": "./dist/executors/generator/schema.json",
+      "description": "generator executor"
     }
   }
 }

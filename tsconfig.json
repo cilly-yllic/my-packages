@@ -8,6 +8,9 @@
     },
     {
       "path": "./packages/test"
+    },
+    {
+      "path": "./plugins/builder"
     }
   ]
 }

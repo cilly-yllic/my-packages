@@ -19,6 +19,7 @@
     "@nx/vite": "20.7.1",
     "@nx/web": "20.7.1",
     "@swc-node/register": "~1.9.1",
+    "@swc/cli": "~0.6.0",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@types/node": "18.16.9",
@@ -27,6 +28,7 @@
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "jiti": "2.4.2",
+    "jsdom": "~22.1.0",
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "20.7.1",
     "prettier": "^2.6.2",
@@ -38,9 +40,12 @@
     "vitest": "^3.0.0"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "plugins/*"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "@nx/devkit": "20.7.1"
+  },
   "nx": {
     "includedScripts": [],
     "targets": {

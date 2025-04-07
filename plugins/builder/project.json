@@ -1,0 +1,32 @@
+{
+  "name": "builder",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "plugins/builder/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "plugins/builder/dist",
+        "main": "plugins/builder/src/index.ts",
+        "tsConfig": "plugins/builder/tsconfig.lib.json",
+        "rootDir": "plugins/builder/src",
+        "generatePackageJson": false,
+        "assets": [
+          {
+            "input": "./plugins/builder/src",
+            "glob": "**/!(*.ts)",
+            "output": "."
+          },
+          {
+            "input": "./plugins/builder/src",
+            "glob": "**/*.d.ts",
+            "output": "."
+          }
+        ]
+      }
+    }
+  }
+}

@@ -32,6 +32,7 @@
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "20.7.1",
     "prettier": "^2.6.2",
+    "tsc-alias": "^1.8.13",
     "tslib": "^2.3.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.19.0",

@@ -1,6 +1,6 @@
 {
   "name": "@cilly/test",
-  "version": "0.0.7",
+  "version": "0.0.6",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,10 +12,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./foo": "./dist/lib/foo.js",
+    "./hoge": "./dist/lib/hoge.js",
+    "./piyo/echo": "./dist/lib/piyo/echo.js"
   },
   "files": [
     "dist",
+    "foo",
+    "hoge",
+    "piyo",
     "!**/*.tsbuildinfo"
   ],
   "dependencies": {

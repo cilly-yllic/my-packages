@@ -7,7 +7,12 @@
     "exec:i": "npx nx exec --cwd=packages/${npm_config_name} -- npm install",
     "add:library": "npx nx g @nx/js:lib --directory=packages/${npm_config_name} --bundler=tsc --importPath=${npm_config_name} --linter=eslint --name=${npm_config_name} --publishable --unitTestRunner=vitest --strict --useProjectJson --config=project --buildable --testEnvironment=node",
     "g:plugin": "npx nx g plugin --name=${npm_config_name} --directory=plugins/${npm_config_name} --importPath=${npm_config_name} --linter=eslint --useProjectJson --unitTestRunner=vitest",
-    "g:executor": "npx nx g @nx/plugin:executor --name=${npm_config_name} --path=plugins/${npm_config_plugin}/src/executors/${npm_config_name}/executor --unitTestRunner=vitest"
+    "g:executor": "npx nx g @nx/plugin:executor --name=${npm_config_name} --path=plugins/${npm_config_plugin}/src/executors/${npm_config_name}/executor --unitTestRunner=vitest",
+    "===== formatter =====": "",
+    "lint": "nx lint",
+    "lint:all": "nx run-many --all --target=lint --skip-nx-cache",
+    "prettier": "nx format:write --all",
+    "prettier:check": "nx format:check --all"
   },
   "private": true,
   "devDependencies": {
@@ -34,7 +39,7 @@
     "nx": "20.7.1",
     "prettier": "^2.6.2",
     "tsc-alias": "^1.8.13",
-    "tslib": "^2.3.0",
+    "tslib": "^2.8.1",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.19.0",
     "verdaccio": "^6.0.5",

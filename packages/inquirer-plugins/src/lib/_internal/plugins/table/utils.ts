@@ -12,11 +12,13 @@ import {
   END_STATUSES,
   NextClose,
   TableValidator,
+  Answers,
+  Done,
 } from './types.js'
 import { Paginator, PointerIndexes, ExtractedRow, ExtractedRows, Cell } from '~types/table.js'
 import { KeyMapRows } from './types/rows.js'
 import { dim, error } from '~utils/chalk.js'
-import { Answers, SetUseState, Done, STATUSES } from '~types/inquirer.js'
+import { SetUseState, STATUSES } from '~types/inquirer.js'
 import { PARSE_TYPES, ParseType } from '~types/parse-types.js'
 import Table, { Cell as TableCell } from 'cli-table3'
 import cliCursor from 'cli-cursor'
@@ -265,6 +267,6 @@ export const onPointer = (
   )
 }
 
-export const validTable = (rows: ExtractedRows, config: TableConfig<TableValidator>, memo: Memo) => {
-  return memo.validate(rows, config, memo)
+export const validTable = (rows: ExtractedRows, answers: Answers, config: TableConfig<TableValidator>, memo: Memo) => {
+  return memo.validate(rows, answers, config, memo)
 }

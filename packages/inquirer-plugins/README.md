@@ -1,11 +1,40 @@
+<!-- MD_HOPPER: CONFIG:
+skip-hidden: true
+filenames: README.md
+output: README.md
+ -->
+
 # inquirer-plugins
 
-This library was generated with [Nx](https://nx.dev).
+_This repository manages custom plugins for the iInquirer package. (Currently, it only includes table.)_
 
-## Building
+This is mostly a collection of custom plugins for my personal use, but feel free to use any that you find useful.
 
-Run `nx build inquirer-plugins` to build the library.
+## Plugins
 
-## Running unit tests
+<!-- MD_HOPPER: LINK_NEXT_LINE:
+id: src-_internal-plugins-table-rmd
+inline: true
+-->
 
-Run `nx test inquirer-plugins` to execute the unit tests via [Vitest](https://vitest.dev/).
+### [Table][md_hopper:src-_internal-plugins-table-rmd]
+
+`Table Plugin` is based on the original [inquirer-table-input](https://github.com/edelciomolina/inquirer-table-input).
+This plugin has been customized to support TypeScript and symbol input.
+
+## PLUGIN DOCS (same as above plugin title links)
+
+<!-- MD_HOPPER: BEGIN_LINKS:
+all: true
+linked: true
+-->
+
+[TABLE PLUGIN][md_hopper:src-_internal-plugins-table-rmd]
+
+<!-- MD_HOPPER: END_LINKS: -->
+
+<!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
+
+[md_hopper:src-_internal-plugins-table-rmd]: ./src/lib/_internal/plugins/table/README.md 'TABLE PLUGIN'
+
+<!-- MD_HOPPER: END_DEFINE_LINKS: -->

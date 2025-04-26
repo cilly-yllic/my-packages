@@ -30,7 +30,7 @@ export const onArrowKeyPress = (
     row,
   }
   setPointer(pointer)
-  if (pointerIndexes.row !== row)  {
+  if (pointerIndexes.row !== row) {
     setPaginator(paginate(pointer, pageSize, maxRowIndex))
   }
 }

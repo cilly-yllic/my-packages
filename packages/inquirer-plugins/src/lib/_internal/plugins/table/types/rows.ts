@@ -1,1 +1,1 @@
-export type KeyMapRows = Record<string, string>[]
+export type KeyMapRows = Record<string, number | boolean | string | null>[]

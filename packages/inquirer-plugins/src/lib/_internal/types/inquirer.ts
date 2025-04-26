@@ -1,9 +1,14 @@
 import { Status } from '@inquirer/core'
+import { type Prettify } from '@inquirer/type'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Answers = Readonly<Record<string, any>>
+export type Answers<T> = Readonly<T>
 export type SetUseState<Value> = (newValue: Value) => void
-export type Done = (answers: Answers) => void
+
+interface DoneIf<T> {
+  status: Status
+  data: T
+}
+export type Done<T> = (arg: Prettify<DoneIf<T>>) => void
 
 export const STATUSES: Record<Status, Status> = Object.freeze({
   loading: 'loading',

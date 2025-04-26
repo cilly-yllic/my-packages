@@ -8,7 +8,9 @@ import {
   Memo,
   Typing,
   NextClose,
-  TableValidator
+  TableValidator,
+  Answers,
+  Done,
 } from './table/types.js'
 import { Paginator, PointerIndexes, ExtractedRows } from '~types/table.js'
 import {
@@ -23,9 +25,10 @@ import {
   clearTyping,
   clear,
   onPointer,
-  validTable, isEditable
-} from './table/utils.js';
-import { Answers, Done, STATUSES } from '~types/inquirer.js'
+  validTable,
+  isEditable,
+} from './table/utils.js'
+import { STATUSES } from '~types/inquirer.js'
 import {
   getBackspaceText,
   getKeypressValue,
@@ -121,18 +124,19 @@ export const TablePlugin = createPrompt((_config: PartialTableConfig, done: Done
     setMessages([])
     switch (key.name) {
       case 'enter':
-      case 'return':
+      case 'return': {
         if (isEditing) {
           setEditing(false)
           break
         }
-        const valid = validTable(rows, config, memo)
+        const valid = validTable(rows, getAnswer(memo.columns, rows, memo), config, memo)
         if (!valid.isValid) {
           setMessages([valid.message])
           break
         }
         onEnd(memo.columns, rows, memo, END_STATUSES.confirmed, setStatus, done)
         break
+      }
       case 'escape':
         if (isEditing) {
           updateRows(rows, typing.backup, pointerIndexes, memo, setRows, setMessages)

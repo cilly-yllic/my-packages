@@ -1,8 +1,9 @@
-import { Colors, DEFAULT_PAGE_SIZE, ValidateResult } from './types/common.js';
+import { Colors, DEFAULT_PAGE_SIZE, ValidateResult } from './types/common.js'
 import { Column } from './types/columns.js'
 import { Messages, TableConfig } from './types/table.js'
 import { ExtractedRows, PageSize } from '~types/table.js'
-import { cyan, hop, success, warn } from '~utils/chalk.js';
+import { cyan, hop, success, warn } from '~utils/chalk.js'
+import { Answers as _Answers, Done as _Done } from '~types/inquirer.js'
 
 export * from './types/columns.js'
 export * from './types/common.js'
@@ -11,9 +12,18 @@ export * from './types/table.js'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export type TableValidator = (raws: ExtractedRows, config: TableConfig<TableValidator>, memo: Memo) => ValidateResult
+export type TableValidator = (
+  raws: ExtractedRows,
+  answers: Answers,
+  config: TableConfig<TableValidator>,
+  memo: Memo
+) => ValidateResult
 export type Validator = (input: any, raws: ExtractedRows, memo: Memo) => ValidateResult
 export type Parser = (input: any, raws: ExtractedRows, memo: Memo) => any
+export type Answers = _Answers<{
+  table: Record<string, number | boolean | string | null>[]
+}>
+export type Done = _Done<Answers>
 
 export interface Memo {
   maxRowIndex: number

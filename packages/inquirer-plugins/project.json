@@ -1,0 +1,13 @@
+{
+  "name": "inquirer-plugins",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/inquirer-plugins/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project inquirer-plugins --web",
+  "targets": {
+    "replace-aliases": {},
+    "output": {},
+    "generator": {}
+  }
+}

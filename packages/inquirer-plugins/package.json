@@ -1,0 +1,36 @@
+{
+  "name": "inquirer-plugins",
+  "version": "1.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./table": "./dist/lib/modules/table.js",
+    "./types/chalk": "./dist/lib/modules/types/chalk.js",
+    "./types/inquirer": "./dist/lib/modules/types/inquirer.js",
+    "./types/parse-types": "./dist/lib/modules/types/parse-types.js",
+    "./types/table": "./dist/lib/modules/types/table.js"
+  },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
+  "dependencies": {
+    "@inquirer/core": "^10.1.10",
+    "chalk": "^5.4.1",
+    "cli-cursor": "^5.0.0",
+    "cli-table3": "^0.6.5",
+    "figures": "^6.1.0",
+    "my-gadgetry": "1.3.6",
+    "tslib": "^2.3.0",
+    "@inquirer/type": "3.0.6"
+  }
+}

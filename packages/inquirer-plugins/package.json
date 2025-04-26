@@ -2,6 +2,28 @@
   "name": "inquirer-plugins",
   "version": "1.0.2",
   "type": "module",
+  "keywords": [
+    "answer",
+    "answers",
+    "ask",
+    "confirm",
+    "generator",
+    "input",
+    "inquire",
+    "inquirer",
+    "prompt",
+    "prompts",
+    "table",
+    "question"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cilly-yllic/my-packages.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cilly-yllic/my-packages/issues"
+  },
+  "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/inquirer-plugins/src/lib/_internal/plugins/table/README.md",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

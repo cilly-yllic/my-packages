@@ -2,6 +2,14 @@
   "name": "my-gadgetry",
   "version": "1.3.6",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cilly-yllic/my-packages.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cilly-yllic/my-packages/issues"
+  },
+  "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/my-gadgetry/README.md",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

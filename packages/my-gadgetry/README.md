@@ -1,11 +1,20 @@
-# my-gadgetry
+<!-- MD_HOPPER: CONFIG:
+skip-hidden: true
+filenames: README.md
+output: README.md
+ -->
 
-This library was generated with [Nx](https://nx.dev).
+# my gadgetry
 
-## Building
+<!-- MD_HOPPER: LINK_NEXT_LINE:
+id: src-_internal-dev-ops-rmd
+inline: true
+-->
 
-Run `nx build my-gadgetry` to build the library.
+- [Dev Ops][md_hopper:src-_internal-dev-ops-rmd]
 
-## Running unit tests
+<!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
 
-Run `nx test my-gadgetry` to execute the unit tests via [Vitest](https://vitest.dev/).
+[md_hopper:src-_internal-dev-ops-rmd]: ./src/lib/_internal/dev-ops/README.md 'Dev Ops'
+
+<!-- MD_HOPPER: END_DEFINE_LINKS: -->

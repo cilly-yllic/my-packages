@@ -11,6 +11,9 @@
     },
     {
       "path": "./plugins/builder"
+    },
+    {
+      "path": "./packages/inquirer-plugins"
     }
   ]
 }

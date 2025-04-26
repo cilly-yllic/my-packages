@@ -24,6 +24,8 @@ export const writePackageJson = (
       sideEffects: false,
     }
     cleanDirectory(prefix, outputPath)
-    writeJsonSync(join(prefix, outputPath, 'package.json'), pkgManifest, { spaces: 2 })
+    writeJsonSync(join(prefix, outputPath, 'package.json'), pkgManifest, {
+      spaces: 2,
+    })
   }
 }

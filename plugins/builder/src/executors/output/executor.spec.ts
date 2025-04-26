@@ -1,9 +1,9 @@
-import { ExecutorContext } from '@nx/devkit';
+import { ExecutorContext } from '@nx/devkit'
 
-import { OutputExecutorSchema } from './schema';
-import executor from './executor';
+import { OutputExecutorSchema } from './schema'
+import executor from './executor'
 
-const options: OutputExecutorSchema = {};
+const options: OutputExecutorSchema = {}
 const context: ExecutorContext = {
   root: '',
   cwd: process.cwd(),
@@ -17,11 +17,11 @@ const context: ExecutorContext = {
     version: 2,
   },
   nxJsonConfiguration: {},
-};
+}
 
 describe('Output Executor', () => {
   it('can run', async () => {
-    const output = await executor(options, context);
-    expect(output.success).toBe(true);
-  });
-});
+    const output = await executor(options, context)
+    expect(output.success).toBe(true)
+  })
+})

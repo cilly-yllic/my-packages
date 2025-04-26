@@ -42,7 +42,6 @@ export const isJson = (str: string): boolean => {
   try {
     const result = JSON.parse(str)
     return isString(result) || isObject(result)
-    // eslint-disable-next-line unused-imports/no-unused-vars
   } catch (_e) {
     return false
   }

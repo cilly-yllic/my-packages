@@ -1,11 +1,35 @@
-# md-hopper
+<!-- MD_HOPPER: CONFIG: -->
 
-This library was generated with [Nx](https://nx.dev).
+# MD HOPPER
 
-## Building
+md-hopper is a tool that recursively processes README.md files, starting from a specified README.md file and adding links to other README.md files nested within its directories to the parent README.md file.
+This helps consolidate dispersed README files into a single, easily manageable document.
 
-Run `nx build md-hopper` to build the library.
+## Installation
 
-## Running unit tests
+```bash
+$ npm i -g md-hopper
+```
 
-Run `nx test md-hopper` to execute the unit tests via [Vitest](https://vitest.dev/).
+or
+
+```bash
+$ npm i md-hopper
+```
+
+## Commands
+
+<!-- MD_HOPPER: LINK_NEXT_LINE:
+id: link-command
+inline: true
+-->
+
+### [LINK][md_hopper:link-command]
+
+<!-- MD_HOPPER: BEFORE_GENERATE_LINK (6/4/2024, 10:23:14 AM): - [generate][md_hopper:generate-command] -->
+
+<!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
+
+[md_hopper:link-command]: ./src/lib/cli/commands/link/README.md 'LINK COMMAND'
+
+<!-- MD_HOPPER: END_DEFINE_LINKS: -->

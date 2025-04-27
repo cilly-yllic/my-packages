@@ -7,7 +7,12 @@
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": false,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "~internal/*": ["src/lib/_internal/*"],
+      "~types/*": ["src/lib/_internal/types/*"],
+      "~utils/*": ["src/lib/_internal/utils/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "references": [],

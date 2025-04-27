@@ -1,3 +1,6 @@
+<!-- MD_HOPPER: ID: md-hopper -->
+<!-- MD_HOPPER: TITLE: MD HOPPER -->
+<!-- MD_HOPPER: OUTPUT: README.md -->
 <!-- MD_HOPPER: CONFIG: -->
 
 # MD HOPPER
@@ -19,17 +22,22 @@ $ npm i md-hopper
 
 ## Commands
 
-<!-- MD_HOPPER: LINK_NEXT_LINE:
-id: link-command
-inline: true
+<!-- MD_HOPPER: BEGIN_LINKS:
+all: true
+linked: true
+child: true
+grandChild: false
+parallel: false
 -->
+[LINK COMMAND][md_hopper:md-hopper-link]
 
-### [LINK][md_hopper:link-command]
-
-<!-- MD_HOPPER: BEFORE_GENERATE_LINK (6/4/2024, 10:23:14 AM): - [generate][md_hopper:generate-command] -->
-
-<!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
-
-[md_hopper:link-command]: ./src/lib/cli/commands/link/README.md 'LINK COMMAND'
-
+<!-- MD_HOPPER: END_LINKS: --><!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
+[md_hopper:main]: ../../README.md 'MyPackages'
+[md_hopper:inquirer-plugins]: ../inquirer-plugins/README.md 'inquirer-plugins'
+[md_hopper:inquirer-plugins-table]: ../inquirer-plugins/src/lib/_internal/plugins/table/README.md 'TABLE PLUGIN'
+[md_hopper:md-hopper-link]: ./src/lib/cli/commands/link/README.md 'LINK COMMAND'
+[md_hopper:my-gadgetry]: ../my-gadgetry/README.md 'my gadgetry'
+[md_hopper:my-gadgetry-dev-ops]: ../my-gadgetry/src/lib/_internal/dev-ops/README.md 'Dev Ops'
+[md_hopper:test]: ../test/README.md 'test'
+[md_hopper:plugins-builder]: ../../plugins/builder/README.md 'builder'
 <!-- MD_HOPPER: END_DEFINE_LINKS: -->

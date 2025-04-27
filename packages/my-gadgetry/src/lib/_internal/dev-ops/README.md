@@ -1,7 +1,6 @@
-<!-- MD_HOPPER: ID: src-_internal-dev-ops-rmd -->
+<!-- MD_HOPPER: ID: my-gadgetry-dev-ops -->
 <!-- MD_HOPPER: TITLE: Dev Ops -->
 <!-- MD_HOPPER: OUTPUT: README.md -->
-
 # Dev Ops
 
 <!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->

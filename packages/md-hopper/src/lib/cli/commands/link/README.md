@@ -1,6 +1,7 @@
-<!-- MD_HOPPER: ID: link-command -->
+<!-- MD_HOPPER: ID: md-hopper-link -->
+<!-- MD_HOPPER: TITLE: LINK COMMAND -->
+<!-- MD_HOPPER: OUTPUT: README.md -->
 <!-- MD_HOPPER: LOCK: true -->
-
 # LINK COMMAND
 
 - md-hopper link # short l
@@ -19,7 +20,7 @@ exclude: dist/**/* # optional: default empty (only node_modules)
 filenames: README.md,CHANGE_LOG.md # optional: default README.md
 -->
 
-<!-- MD_HOPPER: OUTPUT: README.md --> # optional (default: README.md) ex: README_MAIN.md
+ # optional (default: README.md) ex: README_MAIN.md
 ```
 
 ### OTHERS
@@ -29,16 +30,12 @@ filenames: README.md,CHANGE_LOG.md # optional: default README.md
 _set file id and link name_
 
 ```markdown
-<!-- MD_HOPPER: ID: hoge -->
-<!-- MD_HOPPER: LOCK: true --> # not generate when it true, default false
-<!-- MD_HOPPER: TITLE: LINK COMMAND -->
+ # not generate when it true, default false
 ```
 
 or
 
 ```markdown
-<!-- MD_HOPPER: ID: hoge -->
-
 # GENERATE COMMAND
 ```
 

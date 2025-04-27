@@ -14,6 +14,9 @@
     },
     {
       "path": "./packages/inquirer-plugins"
+    },
+    {
+      "path": "./packages/md-hopper"
     }
   ]
 }

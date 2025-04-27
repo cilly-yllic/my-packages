@@ -1,0 +1,13 @@
+{
+  "name": "md-hopper",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/md-hopper/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project md-hopper --web",
+  "targets": {
+    "replace-aliases": {},
+    "output": {},
+    "generator": {}
+  }
+}

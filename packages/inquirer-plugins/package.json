@@ -2,6 +2,7 @@
   "name": "inquirer-plugins",
   "version": "1.0.4",
   "type": "module",
+  "license": "MIT",
   "keywords": [
     "answer",
     "answers",

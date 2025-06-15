@@ -15,7 +15,14 @@
     }
   },
   "include": ["src/**/*.ts"],
-  "references": [],
+  "references": [
+    {
+      "path": "../inquirer-plugins/tsconfig.lib.json"
+    },
+    {
+      "path": "../my-gadgetry/tsconfig.lib.json"
+    }
+  ],
   "exclude": [
     "vite.config.ts",
     "vite.config.mts",

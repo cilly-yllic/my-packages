@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "test": "nx run-many --target=test --all",
     "release": "npx nx release --projects=${npm_config_name}",
     "build": "nx run-many --target=output --all",
     "exec:i": "npx nx exec --cwd=packages/${npm_config_name} -- npm install",

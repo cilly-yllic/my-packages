@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { resolve } from 'path';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -8,7 +9,14 @@ export default defineConfig(() => ({
   // worker: {
   //  plugins: [ nxViteTsPaths() ],
   // },
+  resolve: {
+    alias: {
+      '~internal': resolve(__dirname, './src/lib/_internal'),
+      '~core': resolve(__dirname, './src/lib/_core'),
+    }
+  },
   test: {
+    passWithNoTests: true,
     watch: false,
     globals: true,
     environment: 'node',

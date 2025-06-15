@@ -4,6 +4,12 @@
   "include": [],
   "references": [
     {
+      "path": "../inquirer-plugins"
+    },
+    {
+      "path": "../my-gadgetry"
+    },
+    {
       "path": "./tsconfig.lib.json"
     },
     {

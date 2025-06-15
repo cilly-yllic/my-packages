@@ -17,6 +17,9 @@
     },
     {
       "path": "./packages/md-hopper"
+    },
+    {
+      "path": "./packages/firestore-document-type-patterns"
     }
   ]
 }

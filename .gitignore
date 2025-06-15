@@ -49,3 +49,5 @@ packages/*/*/
 !packages/*/src/
 !packages/*/src/**/package.json
 !packages/*/src/**/*
+
+firestore-debug.log

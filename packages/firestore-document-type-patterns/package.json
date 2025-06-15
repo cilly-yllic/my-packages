@@ -1,0 +1,54 @@
+{
+  "name": "firestore-document-type-patterns",
+  "version": "6.0.11",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cilly-yllic/my-packages.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cilly-yllic/my-packages/issues"
+  },
+  "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/firestore-document-type-patterns/README.md",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": "./dist/lib/core.js",
+    "./security-rule": "./dist/lib/security-rule.js",
+    "./types/firestore-field-types": "./dist/lib/types/firestore-field-types.js",
+    "./types/inclusion-types": "./dist/lib/types/inclusion-types.js",
+    "./types/key-type": "./dist/lib/types/key-type.js",
+    "./types/key-type-patterns": "./dist/lib/types/key-type-patterns.js",
+    "./types/key-type-values": "./dist/lib/types/key-type-values.js",
+    "./types/key-value-patterns": "./dist/lib/types/path-type.js",
+    "./types/types": "./dist/lib/types/types.js",
+    "./types/utilities": "./dist/lib/types/utilities.js"
+  },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo",
+    "!**/__tests__",
+    "!src/firestore/**",
+    "core",
+    "security-rule",
+    "types"
+  ],
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.3",
+    "my-gadgetry": "1.3.8",
+    "tslib": "^2.3.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
+  }
+}

@@ -4,6 +4,9 @@
   "include": [],
   "references": [
     {
+      "path": "../my-gadgetry"
+    },
+    {
       "path": "./tsconfig.lib.json"
     },
     {

@@ -2,7 +2,7 @@ import { resolve, join } from 'path'
 import { getAllFiles } from '../../fs.js'
 
 describe('getAllFiles', () => {
-  const path = resolve(__dirname, '../../../..', 'fs-test')
+  const path = resolve(__dirname, '../../../..', '__fs-test__')
   it('no exclude & include', () => {
     const exclude: string[] = []
     const include: string[] = []

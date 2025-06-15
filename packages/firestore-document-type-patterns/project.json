@@ -1,0 +1,20 @@
+{
+  "name": "firestore-document-type-patterns",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/firestore-document-type-patterns/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project firestore-document-type-patterns --web",
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "firebase emulators:exec --only firestore \"vitest run\"",
+        "forwardAllArgs": true
+      }
+    },
+    "replace-aliases": {},
+    "output": {},
+    "generator": {}
+  }
+}

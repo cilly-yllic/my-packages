@@ -85,7 +85,9 @@ const replaceToLink = (txt: string, inline: boolean, detail: Detail) => {
       return txt
     }
     return `${replaceLineToLink(txt.replace(LINK_REG_EXP, '$1$2'), getLinkName(detail.id))}
-<!-- ${MD_HOPPER_COMMENT_PREFIX}${PARAM_SEPARATOR} ${PROPERTIES.BEFORE_GENERATE_LINK} (${new Date().toLocaleString()})${PARAM_SEPARATOR} ${txt} -->
+<!-- ${MD_HOPPER_COMMENT_PREFIX}${PARAM_SEPARATOR} ${
+      PROPERTIES.BEFORE_GENERATE_LINK
+    } (${new Date().toLocaleString()})${PARAM_SEPARATOR} ${txt} -->
 `
   }
   if (inline) {

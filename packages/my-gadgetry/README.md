@@ -16,8 +16,11 @@ child: true
 grandChild: false
 parallel: false
 -->
+
 [Dev Ops][md_hopper:my-gadgetry-dev-ops]
+
 <!-- MD_HOPPER: END_LINKS: --><!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
+
 [md_hopper:main]: ../../README.md 'MyPackages'
 [md_hopper:inquirer-plugins]: ../inquirer-plugins/README.md 'inquirer-plugins'
 [md_hopper:inquirer-plugins-table]: ../inquirer-plugins/src/lib/_internal/plugins/table/README.md 'TABLE PLUGIN'
@@ -26,4 +29,5 @@ parallel: false
 [md_hopper:my-gadgetry-dev-ops]: ./src/lib/_internal/dev-ops/README.md 'Dev Ops'
 [md_hopper:test]: ../test/README.md 'test'
 [md_hopper:plugins-builder]: ../../plugins/builder/README.md 'builder'
+
 <!-- MD_HOPPER: END_DEFINE_LINKS: -->

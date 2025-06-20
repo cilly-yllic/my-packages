@@ -28,6 +28,7 @@
     "./converters/string": "./dist/lib/modules/converters/string.js",
     "./dev-ops/package-generator/generate-alias": "./dist/lib/modules/dev-ops/package-generator/generate-alias.js",
     "./fs": "./dist/lib/modules/fs.js",
+    "./path": "./dist/lib/modules/path.js",
     "./type-check": "./dist/lib/modules/type-check.js",
     "./types/utilities": "./dist/lib/modules/types/utilities.js"
   },
@@ -37,6 +38,7 @@
     "converters",
     "dev-ops",
     "fs",
+    "path",
     "type-check",
     "!**/*.tsbuildinfo"
   ],

@@ -1,9 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Action = (...args: any[]) => any
 
 export interface BeforeFunction {
   fn: Action
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   args: any[]
 }
 

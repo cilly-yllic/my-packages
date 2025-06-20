@@ -73,13 +73,17 @@ export const init = (commandClass: CommandClass<CommandOptions, MdSettings>) => 
     .option(`${OPTIONS.filenames} <strings>`, 'filenames (default: README.md only)')
     .option(`${OPTIONS.output} <filename>`, 'output filename (default: README.md (replace))')
     .option(`${OPTIONS.input} <filename>`, 'target root filename (default: README.md)')
-    .option(`${OPTIONS['id-gen']} <string>`, `Choose generate type (default: ${GENERATE_TYPES.path})`, (value: string) => {
-      const values = Object.values(GENERATE_TYPES)
-      if (!(values as string[]).includes(value)) {
-        throw new Error(`Invalid type. Allowed values are: ${values.join(', ')}`)
+    .option(
+      `${OPTIONS['id-gen']} <string>`,
+      `Choose generate type (default: ${GENERATE_TYPES.path})`,
+      (value: string) => {
+        const values = Object.values(GENERATE_TYPES)
+        if (!(values as string[]).includes(value)) {
+          throw new Error(`Invalid type. Allowed values are: ${values.join(', ')}`)
+        }
+        return value
       }
-      return value
-    })
+    )
     .option(`${OPTIONS.id} <string>`, 'type id')
     .option(`${OPTIONS.title} <string>`, 'title name')
     .option(`${OPTIONS.lock} <boolean>`, 'is locked? if true not link this file. (default: false)')

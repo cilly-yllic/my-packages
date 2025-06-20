@@ -1,6 +1,7 @@
 <!-- MD_HOPPER: ID: inquirer-plugins-table -->
 <!-- MD_HOPPER: TITLE: TABLE PLUGIN -->
 <!-- MD_HOPPER: OUTPUT: README.md -->
+
 `Table Plugin` is based on the original [inquirer-table-input](https://github.com/edelciomolina/inquirer-table-input).
 This plugin has been customized to support TypeScript and symbol input.
 

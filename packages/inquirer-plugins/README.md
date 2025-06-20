@@ -31,10 +31,13 @@ This plugin has been customized to support TypeScript and symbol input.
 all: true
 linked: true
 -->
+
 [TABLE PLUGIN][md_hopper:inquirer-plugins-table]
+
 <!-- MD_HOPPER: END_LINKS: -->
 
 <!-- MD_HOPPER: BEGIN_DEFINE_LINKS: -->
+
 [md_hopper:main]: ../../README.md 'MyPackages'
 [md_hopper:inquirer-plugins-table]: ./src/lib/_internal/plugins/table/README.md 'TABLE PLUGIN'
 [md_hopper:md-hopper]: ../md-hopper/README.md 'MD HOPPER'
@@ -43,4 +46,5 @@ linked: true
 [md_hopper:my-gadgetry-dev-ops]: ../my-gadgetry/src/lib/_internal/dev-ops/README.md 'Dev Ops'
 [md_hopper:test]: ../test/README.md 'test'
 [md_hopper:plugins-builder]: ../../plugins/builder/README.md 'builder'
+
 <!-- MD_HOPPER: END_DEFINE_LINKS: -->

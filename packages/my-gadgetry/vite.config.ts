@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import { resolve } from 'path';
+import { resolve } from 'path'
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -13,7 +13,7 @@ export default defineConfig(() => ({
     alias: {
       '~internal': resolve(__dirname, './src/lib/_internal'),
       '~core': resolve(__dirname, './src/lib/_core'),
-    }
+    },
   },
   test: {
     passWithNoTests: true,

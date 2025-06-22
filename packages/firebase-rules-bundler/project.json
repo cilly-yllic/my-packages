@@ -1,0 +1,13 @@
+{
+  "name": "firebase-rules-bundler",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/firebase-rules-bundler/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project firebase-rules-bundler --web",
+  "targets": {
+    "replace-aliases": {},
+    "output": {},
+    "generator": {}
+  }
+}

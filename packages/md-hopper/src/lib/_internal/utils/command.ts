@@ -7,9 +7,7 @@ type SettingsFnc<CommandOptions extends Record<string, any>, MdSettings extends 
 ) => MdSettings
 
 const invert = (obj: Record<string, string>) => {
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [value, key])
-  );
+  return Object.fromEntries(Object.entries(obj).map(([key, value]) => [value, key]))
 }
 
 export const OPTION_SHORTS = Object.freeze({
@@ -39,19 +37,50 @@ export const OPTION_SHORTS = Object.freeze({
   x: '',
   y: '',
   z: '',
-  
+
   A: '',
   B: '',
   C: '',
-  D: 'depth', E: 'exclude', F: '', G: 'id-gen',
-  H: '', I: 'include', J: '', K: '',
-  L: 'lock', M: '', N: '', O: '', P: '', Q: '', R: '', S: '', T: 'title', U: '', V: '', W: '',  X: '', Y: '', Z: '',
+  D: 'depth',
+  E: 'exclude',
+  F: '',
+  G: 'id-gen',
+  H: '',
+  I: 'include',
+  J: '',
+  K: '',
+  L: 'lock',
+  M: '',
+  N: '',
+  O: '',
+  P: '',
+  Q: '',
+  R: '',
+  S: '',
+  T: 'title',
+  U: '',
+  V: '',
+  W: '',
+  X: '',
+  Y: '',
+  Z: '',
 } as const)
 
 const INVERTED_OPTION_SHORTS = invert(OPTION_SHORTS)
 
 const OPTION_KEYS = Object.freeze([
-  'filenames', 'input', 'output', 'skip-hidden', 'type', 'depth', 'exclude', 'id-gen', 'include', 'lock', 'title', 'id'
+  'filenames',
+  'input',
+  'output',
+  'skip-hidden',
+  'type',
+  'depth',
+  'exclude',
+  'id-gen',
+  'include',
+  'lock',
+  'title',
+  'id',
 ] as const)
 export const OPTIONS = OPTION_KEYS.reduce((acc: Record<string, string>, key) => {
   const short = INVERTED_OPTION_SHORTS[key]

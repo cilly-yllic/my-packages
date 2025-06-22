@@ -1,17 +1,8 @@
-import { readFileSync, statSync, existsSync } from 'fs'
+import { statSync, existsSync } from 'fs'
 
 import { getAllFiles } from 'my-gadgetry/fs'
-import { isJson } from 'my-gadgetry/type-check'
 
 export { getAllFiles } from 'my-gadgetry/fs'
-
-export const readJsonFileSync = (path: string, encode: BufferEncoding = 'utf-8') => {
-  const json = isJson(readFileSync(path, encode))
-  if (!json) {
-    return {}
-  }
-  return json
-}
 
 export const isDirectory = (path: string) => {
   if (!existsSync(path)) {

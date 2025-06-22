@@ -41,6 +41,7 @@ export const parse = (txt: string): MdSettings => {
     } else {
       continue
     }
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore: TS7053: Element implicitly has an any type because expression of type any can't be used to index type Setting
     settings[key] = val as MdSettings[typeof key]
   }

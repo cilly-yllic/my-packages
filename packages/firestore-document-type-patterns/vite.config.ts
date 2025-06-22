@@ -15,7 +15,7 @@ export default defineConfig(() => ({
       '~internal': resolve(__dirname, './src/lib/_internal'),
       '~types': resolve(__dirname, './src/lib/_internal/types'),
       '~utils': resolve(__dirname, './src/lib/_internal/utils'),
-    }
+    },
   },
   test: {
     passWithNoTests: true,

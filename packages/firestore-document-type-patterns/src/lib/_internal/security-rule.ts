@@ -29,7 +29,7 @@ export const convertTypeToValue = <D extends DocumentData = DocumentData, V exte
 export const getRecursiveWrongTypeValues = <
   D extends DocumentData = DocumentData,
   C extends KeyTypeConst = KeyTypeConst,
-  V extends KeyValue = KeyValue,
+  V extends KeyValue = KeyValue
 >(
   keyTypes: DocumentType<D>[],
   db: Firestore

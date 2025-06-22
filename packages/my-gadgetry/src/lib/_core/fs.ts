@@ -1,7 +1,8 @@
-import { statSync, readdirSync } from 'fs'
+import { statSync, readdirSync, readFileSync } from 'fs'
 import { relative } from 'path'
 
 import { minimatch } from 'minimatch'
+import { isJson } from '~core/type-check.js'
 
 export interface Options {
   include?: string[]
@@ -74,4 +75,12 @@ export const getAllFiles = (startDir: string, _options?: Options) => {
     throw new Error('Invalid depth, must be greater than 0')
   }
   return _getAllFiles(startDir, { ...OPTIONS, ...(_options || {}), startDir })
+}
+
+export const readJsonFileSync = (path: string, encode: BufferEncoding = 'utf-8') => {
+  const json = readFileSync(path, encode)
+  if (!isJson(json)) {
+    return {}
+  }
+  return JSON.parse(json)
 }

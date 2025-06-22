@@ -20,6 +20,9 @@
     },
     {
       "path": "./packages/firestore-document-type-patterns"
+    },
+    {
+      "path": "./packages/firebase-rules-bundler"
     }
   ]
 }

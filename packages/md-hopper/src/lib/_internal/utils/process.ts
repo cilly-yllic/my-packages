@@ -1,8 +1,9 @@
 import { join } from 'path'
+import { getDirnameFromFileURL } from 'my-gadgetry/path'
+import { readJsonFileSync } from 'my-gadgetry/fs'
 
 import { Env, ENVS } from '~types/process.js'
-import { readJsonFileSync } from '~utils/fs.js'
-import { getDirnameFromFileURL } from '~utils/path.js'
+// import { getDirnameFromFileURL } from '~utils/path.js'
 
 export * from '~types/process.js'
 
@@ -11,7 +12,7 @@ const __dirname = getDirnameFromFileURL(import.meta.url)
 export const args = process.argv.slice(2)
 
 export const init = () => {
-  const pkg = readJsonFileSync(join(__dirname, '../../..', 'package.json')) as { version: string }
+  const pkg = readJsonFileSync(join(__dirname, '../../../..', 'package.json')) as { version: string }
   set(ENVS.PACKAGE_VERSION, pkg.version)
   set(ENVS.IS_DEBUG, bool(process.env.DEBUG) || args.includes('--debug'))
 }

@@ -57,7 +57,7 @@ export const getRecursiveWrongTypes = <D extends Data = Data, C extends KeyTypeC
 export const getRecursiveWrongTypeValues = <
   D extends Data = Data,
   C extends KeyTypeConst = KeyTypeConst,
-  V extends KeyValue = KeyValue,
+  V extends KeyValue = KeyValue
 >(
   keyTypesList: KeyTypePatterns<D>[],
   keyType: KeyType<C>,

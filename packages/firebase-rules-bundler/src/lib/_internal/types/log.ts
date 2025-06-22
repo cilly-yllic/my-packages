@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TableCellValue = any
 type SingleTable = TableCellValue[]
 type SimpleTable = TableCellValue[][]

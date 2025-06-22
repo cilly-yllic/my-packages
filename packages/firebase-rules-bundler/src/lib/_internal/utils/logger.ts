@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import stripAnsi from 'strip-ansi'
 import { SPLAT } from 'triple-beam'
 import winston from 'winston'
@@ -58,3 +59,5 @@ export const LOG_LEVELS = {
 
 export type LogLevel = (typeof LOG_LEVELS)[keyof typeof LOG_LEVELS]
 export const logger = rawLogger
+
+/* eslint-enable @typescript-eslint/no-explicit-any */

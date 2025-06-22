@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Command as Program } from 'commander'
 
 import { Action, BeforeFunction, ActionArg } from '~types/command.js'
@@ -69,3 +70,5 @@ export class CommandClass<T extends DefaultOptions> {
     })
   }
 }
+
+/* eslint-enable @typescript-eslint/no-explicit-any */

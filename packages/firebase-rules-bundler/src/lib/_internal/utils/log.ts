@@ -6,6 +6,7 @@ import { Table } from '~types/log.js'
 
 import { logger, LogLevel } from './logger.js'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LogDataOrUndefined = Record<string, any> | undefined
 
 const IS_WINDOWS = process.platform === 'win32'

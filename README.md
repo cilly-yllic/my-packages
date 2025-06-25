@@ -24,7 +24,6 @@ parallel: true
 [md_hopper:md-hopper-link]: ./packages/md-hopper/src/lib/cli/commands/link/README.md 'LINK COMMAND'
 [md_hopper:my-gadgetry]: ./packages/my-gadgetry/README.md 'my gadgetry'
 [md_hopper:my-gadgetry-dev-ops]: ./packages/my-gadgetry/src/lib/_internal/dev-ops/README.md 'Dev Ops'
-[md_hopper:test]: ./packages/test/README.md 'test'
 [md_hopper:plugins-builder]: ./plugins/builder/README.md 'builder'
 
 <!-- MD_HOPPER: END_DEFINE_LINKS: -->

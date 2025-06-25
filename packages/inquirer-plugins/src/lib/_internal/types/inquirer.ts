@@ -4,7 +4,7 @@ import { type Prettify } from '@inquirer/type'
 export type Answers<T> = Readonly<T>
 export type SetUseState<Value> = (newValue: Value) => void
 
-interface DoneIf<T> {
+export interface DoneIf<T> {
   status: Status
   data: T
 }

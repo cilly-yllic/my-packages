@@ -34,7 +34,7 @@ jobs:
           node-version-file: ${{ env.NODE_VERSION_FILE }}
           cache: 'npm'
 
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - uses: nrwl/nx-set-shas@v4
       - run: npm i -g firebase-tools
       - name: Build your plugin

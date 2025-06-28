@@ -8,6 +8,7 @@ on:
 
 env:
   NODE_VERSION_FILE: .nvmrc
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_TOKEN }}
 
 permissions:
   actions: read

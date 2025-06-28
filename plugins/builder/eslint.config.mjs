@@ -41,7 +41,7 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredDependencies: ['@nx/devkit', 'fs-extra', 'minimatch'], // these libs will be omitted from checks
+          ignoredDependencies: ['@nx/devkit', 'fs-extra', 'minimatch', 'vite'], // these libs will be omitted from checks
         },
       ],
     },

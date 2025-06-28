@@ -36,8 +36,7 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
       - run: npm i -g firebase-tools
-      - name: Build your plugin
-        run: npm run build
+      - run: npx nx build --project=plugins/builder
       - uses: nrwl/nx-set-shas@v4
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       # - run: npx nx-cloud record -- echo Hello World

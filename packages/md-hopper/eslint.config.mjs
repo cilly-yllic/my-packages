@@ -8,7 +8,10 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs}', '{projectRoot}/vite.config.{js,ts,mjs,mts}'],
+          ignoredFiles: [
+            '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
+            '{projectRoot}/vite.config.{js,ts,mjs,mts}',
+          ],
         },
       ],
     },
@@ -20,6 +23,26 @@ export default [
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['**/*.json'],
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredDependencies: [
+            '@inquirer/prompts',
+            'chalk',
+            'commander',
+            'inquirer-plugins',
+            'marked',
+            'minimatch',
+            'my-gadgetry',
+            'uuid',
+          ], // these libs will be omitted from checks
+        },
+      ],
     },
   },
 ]

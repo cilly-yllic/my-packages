@@ -8,7 +8,10 @@ export default [
       '@nx/dependency-checks': [
         'error',
         {
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs}', '{projectRoot}/vite.config.{js,ts,mjs,mts}'],
+          ignoredFiles: [
+            '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
+            '{projectRoot}/vite.config.{js,ts,mjs,mts}',
+          ],
         },
       ],
     },
@@ -30,6 +33,17 @@ export default [
     rules: {
       'import/no-restricted-paths': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    files: ['**/*.json'],
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredDependencies: ['@nx/devkit', 'fs-extra', 'minimatch', 'vite'], // these libs will be omitted from checks
+        },
+      ],
     },
   },
 ]

@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+env:
+  NODE_VERSION_FILE: .nvmrc
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_TOKEN }}
+
 permissions:
   actions: read
   contents: read
@@ -16,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          filter: tree:0
           fetch-depth: 0
 
       # This enables task distribution via Nx Cloud
@@ -27,12 +32,13 @@ jobs:
       # Cache node_modules
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
           cache: 'npm'
 
       - run: npm ci --legacy-peer-deps
-      - uses: nrwl/nx-set-shas@v4
       - run: npm i -g firebase-tools
+      - run: npx nx build --project=plugins/builder
+      - uses: nrwl/nx-set-shas@v4
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       # - run: npx nx-cloud record -- echo Hello World
       # Nx Affected runs only tasks affected by the changes in this PR/commit. Learn more: https://nx.dev/ci/features/affected

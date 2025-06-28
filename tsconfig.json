@@ -4,13 +4,13 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/my-gadgetry"
-    },
-    {
-      "path": "./packages/test"
-    },
-    {
       "path": "./plugins/builder"
+    },
+    {
+      "path": "./packages/firebase-rules-bundler"
+    },
+    {
+      "path": "./packages/firestore-document-type-patterns"
     },
     {
       "path": "./packages/inquirer-plugins"
@@ -19,10 +19,7 @@
       "path": "./packages/md-hopper"
     },
     {
-      "path": "./packages/firestore-document-type-patterns"
-    },
-    {
-      "path": "./packages/firebase-rules-bundler"
+      "path": "./packages/my-gadgetry"
     }
   ]
 }

@@ -37,5 +37,5 @@ export default [
       'import/no-restricted-paths': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
     },
-  }
+  },
 ]

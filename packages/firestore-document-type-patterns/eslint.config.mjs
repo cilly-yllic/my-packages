@@ -21,5 +21,16 @@ export default [
     languageOptions: {
       parser: await import('jsonc-eslint-parser'),
     },
-  }
+  },
+  {
+    files: ['**/*.json'],
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredDependencies: ['@firebase/rules-unit-testing', 'firebase'], // these libs will be omitted from checks
+        },
+      ],
+    },
+  },
 ]

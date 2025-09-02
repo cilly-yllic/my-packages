@@ -3,6 +3,9 @@ import baseConfig from '../../eslint.config.mjs'
 export default [
   ...baseConfig,
   {
+    ignores: ['*/**/package.json'],
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
@@ -18,16 +21,5 @@ export default [
     languageOptions: {
       parser: await import('jsonc-eslint-parser'),
     },
-  },
-  {
-    files: ['**/*.json'],
-    rules: {
-      '@nx/dependency-checks': [
-        'error',
-        {
-          ignoredDependencies: ['@firebase/rules-unit-testing', 'firebase', 'my-gadgetry', 'uuid'], // these libs will be omitted from checks
-        },
-      ],
-    },
-  },
+  }
 ]

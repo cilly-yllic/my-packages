@@ -3,6 +3,9 @@ import baseConfig from '../../eslint.config.mjs'
 export default [
   ...baseConfig,
   {
+    ignores: ['*/**/package.json'],
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
@@ -33,17 +36,6 @@ export default [
     rules: {
       'import/no-restricted-paths': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-    },
-  },
-  {
-    files: ['**/*.json'],
-    rules: {
-      '@nx/dependency-checks': [
-        'error',
-        {
-          ignoredDependencies: ['@nx/devkit', 'fs-extra', 'minimatch', 'vite'], // these libs will be omitted from checks
-        },
-      ],
     },
   },
 ]

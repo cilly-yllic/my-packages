@@ -3,6 +3,9 @@ import baseConfig from '../../eslint.config.mjs'
 export default [
   ...baseConfig,
   {
+    ignores: ['*/**/package.json'],
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
@@ -23,26 +26,6 @@ export default [
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-    },
-  },
-  {
-    files: ['**/*.json'],
-    rules: {
-      '@nx/dependency-checks': [
-        'error',
-        {
-          ignoredDependencies: [
-            '@inquirer/prompts',
-            'chalk',
-            'commander',
-            'inquirer-plugins',
-            'marked',
-            'minimatch',
-            'my-gadgetry',
-            'uuid',
-          ], // these libs will be omitted from checks
-        },
-      ],
     },
   },
 ]

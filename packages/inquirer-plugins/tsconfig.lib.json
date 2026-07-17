@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "rootDir": "src",
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
@@ -9,10 +8,11 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
     "paths": {
-      "~internal/*": ["src/lib/_internal/*"],
-      "~types/*": ["src/lib/_internal/types/*"],
-      "~utils/*": ["src/lib/_internal/utils/*"]
-    }
+      "~internal/*": ["./src/lib/_internal/*"],
+      "~types/*": ["./src/lib/_internal/types/*"],
+      "~utils/*": ["./src/lib/_internal/utils/*"]
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts"],
   "references": [

@@ -7,7 +7,7 @@
   "// targets": "to see all targets run: nx show project inquirer-plugins --web",
   "targets": {
     "replace-aliases": {},
-    "output": {},
-    "generator": {}
+    "output": { "executor": "builder:output" },
+    "generator": { "executor": "builder:generator" }
   }
 }

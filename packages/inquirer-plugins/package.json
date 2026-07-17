@@ -31,7 +31,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "development": "./src/index.ts",
+      "@my-packages/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
@@ -47,9 +47,9 @@
     "!**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@inquirer/core": "^10.1.13",
-    "@inquirer/type": "^3.0.7",
-    "chalk": "^5.4.1",
+    "@inquirer/core": "^11.2.1",
+    "@inquirer/type": "^4.0.7",
+    "chalk": "^5.6.2",
     "cli-cursor": "^5.0.0",
     "cli-table3": "^0.6.5",
     "figures": "^6.1.0",

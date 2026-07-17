@@ -10,11 +10,12 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "firebase emulators:exec --only firestore \"vitest run\"",
+        "cwd": "packages/firestore-document-type-patterns",
         "forwardAllArgs": true
       }
     },
     "replace-aliases": {},
-    "output": {},
-    "generator": {}
+    "output": { "executor": "builder:output" },
+    "generator": { "executor": "builder:generator" }
   }
 }

@@ -193,7 +193,7 @@ const LINK_QUESTIONS = (options: CommandOptions) => async (): Promise<Answers> =
 
   answers['idGen'] = await select({
     message: `Choose generate type (default: ${GENERATE_TYPE_CHOICES[0].short})`,
-    default: 0,
+    default: GENERATE_TYPE_CHOICES[0].value,
     choices: getIdGenQuestions(inputPath, options),
   })
   if (answers.idGen === GENERATE_TYPES.manual) {

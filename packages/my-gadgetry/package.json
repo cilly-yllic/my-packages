@@ -17,7 +17,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "development": "./src/index.ts",
+      "@my-packages/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
@@ -43,8 +43,8 @@
     "!**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "fs-extra": "^11.3.0",
-    "minimatch": "^10.0.3",
+    "fs-extra": "^11.3.6",
+    "minimatch": "^10.2.5",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "rootDir": "src",
     "outDir": "dist",
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
@@ -11,7 +10,8 @@
     "paths": {
       "~internal/*": ["./src/lib/_internal/*"],
       "~core/*": ["./src/lib/_core/*"]
-    }
+    },
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts"],
   "references": [],

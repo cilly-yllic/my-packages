@@ -7,7 +7,7 @@
   "// targets": "to see all targets run: nx show project firebase-rules-bundler --web",
   "targets": {
     "replace-aliases": {},
-    "output": {},
-    "generator": {}
+    "output": { "executor": "builder:output" },
+    "generator": { "executor": "builder:generator" }
   }
 }

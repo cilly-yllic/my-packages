@@ -3,7 +3,15 @@
   "compilerOptions": {
     "outDir": "./out-tsc/vitest",
     "types": ["vitest/globals", "vitest/importMeta", "vite/client", "node", "vitest"],
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0",
+    "rootDir": ".",
+    "paths": {
+      "~root/*": ["./src/lib/*"],
+      "~internal/*": ["./src/lib/_internal/*"],
+      "~types/*": ["./src/lib/_internal/types/*"],
+      "~utils/*": ["./src/lib/_internal/utils/*"]
+    }
   },
   "include": [
     "vite.config.ts",

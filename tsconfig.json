@@ -21,5 +21,8 @@
     {
       "path": "./packages/my-gadgetry"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0"
+  }
 }

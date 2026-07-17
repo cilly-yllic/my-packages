@@ -1,6 +1,6 @@
 {
   "name": "firebase-rules-bundler",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "type": "module",
   "bin": {
     "firebase-rules-bundler": "./dist/lib/cli/index.js",

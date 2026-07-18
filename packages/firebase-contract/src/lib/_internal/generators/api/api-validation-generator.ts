@@ -41,6 +41,7 @@ const fieldSchema = (ir: Ir, field: IrField): string => {
   }
   const cons = zodConstraints(field)
   schema = field.list ? `z.array(${schema})${cons}` : `${schema}${cons}`
+  if (field.nullable) schema = `${schema}.nullable()`
   if (field.optional) schema = `${schema}.optional()`
   return `  ${name}: ${schema},`
 }

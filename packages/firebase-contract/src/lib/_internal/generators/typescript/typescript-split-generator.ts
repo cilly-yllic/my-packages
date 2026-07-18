@@ -3,7 +3,7 @@ import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { constantCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
-import { collectDeps, kebabCase, splitGroups, tableNameOf } from '../support/split.js'
+import { assignModuleNames, collectDeps, splitGroups } from '../support/split.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -102,6 +102,7 @@ export const createTypeScriptSplitGenerator = (): Generator => ({
   description: 'TypeScript interfaces, one file per table (types/<table>.ts + types.ts barrel)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const groups = splitGroups(ir)
+    const moduleNames = assignModuleNames(groups.tables)
     const files: GeneratedFile[] = []
     const fileOf = new Map<string, string>() // symbol -> module basename (no ext)
 
@@ -110,7 +111,7 @@ export const createTypeScriptSplitGenerator = (): Generator => ({
     for (const name of groups.leftoverEnums) fileOf.set(name, '_shared')
     for (const name of groups.leftoverModels) fileOf.set(name, '_shared')
     for (const table of groups.tables) {
-      const moduleName = kebabCase(tableNameOf(table))
+      const moduleName = moduleNames.get(table.name) ?? table.name
       fileOf.set(table.name, moduleName)
       for (const [name, home] of groups.enumHome) if (home === table.name) fileOf.set(name, moduleName)
       for (const [name, home] of groups.modelHome) if (home === table.name) fileOf.set(name, moduleName)
@@ -153,7 +154,7 @@ export const createTypeScriptSplitGenerator = (): Generator => ({
     }
 
     for (const table of groups.tables) {
-      const moduleName = kebabCase(tableNameOf(table))
+      const moduleName = moduleNames.get(table.name) ?? table.name
       const deps = collectDeps(ir, [table])
       const enums = deps.enums
         .filter(name => groups.enumHome.get(name) === table.name)

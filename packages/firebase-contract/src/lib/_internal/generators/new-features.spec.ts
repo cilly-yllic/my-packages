@@ -139,10 +139,10 @@ describe('data-connect operations generator', () => {
     const rootTs = contentOf(files, 'operations-types.ts')
     expect(rootTs).toContain('export interface ListProductsByShopResult')
     expect(rootTs).toContain("Pick<Product, 'id' | 'title' | 'status'>[]")
-    expect(rootTs).toContain("from './types.js'")
+    expect(rootTs).toContain("from './types'")
     // connector files are one directory deeper
     const apiTs = contentOf(files, 'api/operations-types.ts')
-    expect(apiTs).toContain("from '../types.js'")
+    expect(apiTs).toContain("from '../types'")
   })
 })
 

@@ -147,7 +147,7 @@ export const createDataConnectAdapterGenerator = (): Generator => ({
     const blocks: string[] = [...headerBlocks(context)]
 
     if (typeImports.length > 0) {
-      blocks.push(`import type { ${typeImports.join(', ')} } from './types.js'`)
+      blocks.push(`import type { ${typeImports.join(', ')} } from './types'`)
     }
     blocks.push("import { fromAny, toAny, type Any } from 'firebase-contract/runtime'")
 

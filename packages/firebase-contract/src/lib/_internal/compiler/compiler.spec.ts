@@ -72,3 +72,26 @@ describe('generate', () => {
     expect(result.diagnostics.some(d => d.code === 'UNKNOWN_GENERATOR')).toBe(true)
   })
 })
+
+describe('diffFiles', () => {
+  it('classifies missing, changed, and matching files', async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { diffFiles } = await import('./compiler.js')
+    const dir = mkdtempSync(join(tmpdir(), 'fbc-diff-'))
+    try {
+      writeFileSync(join(dir, 'same.ts'), 'a\n')
+      writeFileSync(join(dir, 'stale.ts'), 'old\n')
+      const drift = diffFiles([
+        { path: join(dir, 'same.ts'), content: 'a\n' },
+        { path: join(dir, 'stale.ts'), content: 'new\n' },
+        { path: join(dir, 'new.ts'), content: 'x\n' },
+      ])
+      expect(drift.changed).toEqual([join(dir, 'stale.ts')])
+      expect(drift.missing).toEqual([join(dir, 'new.ts')])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})

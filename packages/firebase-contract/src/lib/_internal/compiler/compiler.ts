@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import { Diagnostic, error, hasErrors } from '../diagnostics.js'
@@ -106,6 +106,30 @@ export const generateAll = (
     }
   }
   return { targets, diagnostics: collected, ok }
+}
+
+export interface FileDrift {
+  /** Files whose on-disk content differs from the generated content. */
+  changed: string[]
+  /** Files that generation produces but do not exist on disk yet. */
+  missing: string[]
+}
+
+/**
+ * Compare generated files against what is currently on disk — the dry-run
+ * behind `fbc generate --check`, catching "the contract changed but the
+ * committed outputs were not regenerated" drift without touching the tree.
+ */
+export const diffFiles = (files: GeneratedFile[]): FileDrift => {
+  const drift: FileDrift = { changed: [], missing: [] }
+  for (const file of files) {
+    if (!existsSync(file.path)) {
+      drift.missing.push(file.path)
+    } else if (readFileSync(file.path, 'utf8') !== file.content) {
+      drift.changed.push(file.path)
+    }
+  }
+  return drift
 }
 
 export interface GenerateResult {

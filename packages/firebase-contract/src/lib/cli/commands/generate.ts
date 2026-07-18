@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 
-import { generate, generateAll } from '~internal/compiler/compiler.js'
+import { diffFiles, generate, generateAll } from '~internal/compiler/compiler.js'
 import { DEFAULT_HEADER, toHeaderComment } from '~internal/generators/support/header.js'
 import { countBySeverity, formatDiagnostics } from '~internal/format-diagnostics.js'
 import { createDefaultRegistry } from '~internal/generators/index.js'
@@ -11,6 +11,19 @@ interface GenerateFlags {
   generators?: string
   /** `true` for bare `--header` (default banner); string for custom text. */
   header?: string | boolean
+  /** Dry-run: compare generated content against the files on disk. */
+  check?: boolean
+}
+
+const reportDrift = (changed: string[], missing: string[]): void => {
+  if (changed.length === 0 && missing.length === 0) {
+    console.log('✔ no drift — on-disk files match the contract')
+    return
+  }
+  console.error('✖ drift detected — regenerate and commit the outputs (fbc generate):')
+  for (const path of changed) console.error(`  changed: ${path}`)
+  for (const path of missing) console.error(`  missing: ${path}`)
+  process.exit(1)
 }
 
 export const registerGenerate = (program: Command): void => {
@@ -24,6 +37,7 @@ export const registerGenerate = (program: Command): void => {
       '--header [text]',
       'prepend a comment header to generated files (bare --header = default banner; omitted = contract `header:` or none)'
     )
+    .option('--check', 'verify the on-disk files match what would be generated; exits 1 on drift (writes nothing)')
     .action((entryArg: string | undefined, flags: GenerateFlags) => {
       const config = loadConfig()
       const entry = entryArg ?? config.entry ?? 'contract.yml'
@@ -40,7 +54,7 @@ export const registerGenerate = (program: Command): void => {
       // graph — the one-command flow. Flags switch back to single-target mode.
       const explicit = flags.outDir !== undefined || flags.generators !== undefined || config.outDir !== undefined || config.generators !== undefined
       if (!explicit) {
-        const all = generateAll(entry, { registry, write: true, ...(context ? { context } : {}) })
+        const all = generateAll(entry, { registry, write: !flags.check, ...(context ? { context } : {}) })
         if (all.targets.length > 0 || !all.ok) {
           if (all.diagnostics.length > 0) {
             console.log(formatDiagnostics(all.diagnostics))
@@ -49,6 +63,11 @@ export const registerGenerate = (program: Command): void => {
             const { errors } = countBySeverity(all.diagnostics)
             console.error(`\n✖ generation aborted: ${errors} error(s)`)
             process.exit(1)
+          }
+          if (flags.check) {
+            const drift = diffFiles(all.targets.flatMap(target => target.files))
+            reportDrift(drift.changed, drift.missing)
+            return
           }
           let total = 0
           for (const target of all.targets) {
@@ -65,7 +84,7 @@ export const registerGenerate = (program: Command): void => {
         outDir,
         generators,
         registry,
-        write: true,
+        write: !flags.check,
         ...(context ? { context } : {}),
       })
 
@@ -76,6 +95,11 @@ export const registerGenerate = (program: Command): void => {
         const { errors } = countBySeverity(result.diagnostics)
         console.error(`\n✖ generation aborted: ${errors} error(s)`)
         process.exit(1)
+      }
+      if (flags.check) {
+        const drift = diffFiles(result.files)
+        reportDrift(drift.changed, drift.missing)
+        return
       }
       for (const file of result.files) {
         console.log(`generated ${file.path}`)

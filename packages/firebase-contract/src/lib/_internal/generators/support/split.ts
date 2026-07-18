@@ -57,6 +57,27 @@ export const collectDeps = (ir: Ir, roots: IrModel[]): HostedDeps => {
   return { enums, models }
 }
 
+/**
+ * Assign a unique module basename to every table. Two models may share a
+ * physical table name across services (e.g. both declare
+ * `reconciliation_operations`); the first keeps the table-derived name and
+ * later ones fall back to their model name so files never overwrite each other.
+ */
+export const assignModuleNames = (tables: IrModel[]): Map<string, string> => {
+  const used = new Set<string>()
+  const names = new Map<string, string>()
+  for (const table of tables) {
+    let name = kebabCase(tableNameOf(table))
+    if (used.has(name)) name = kebabCase(pluralize(snakeCase(table.name)))
+    let candidate = name
+    let suffix = 2
+    while (used.has(candidate)) candidate = `${name}-${suffix++}`
+    used.add(candidate)
+    names.set(table.name, candidate)
+  }
+  return names
+}
+
 export interface SplitGroups {
   tables: IrModel[]
   /** enum name → hosting table model name */

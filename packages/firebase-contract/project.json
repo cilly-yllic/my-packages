@@ -1,0 +1,13 @@
+{
+  "name": "firebase-contract",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/firebase-contract/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project firebase-contract --web",
+  "targets": {
+    "replace-aliases": {},
+    "output": { "executor": "builder:output" },
+    "generator": { "executor": "nx:noop" }
+  }
+}

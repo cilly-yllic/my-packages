@@ -25,8 +25,7 @@ const payloadFields = (ir: Ir, payload: IrApiPayload): IrField[] => {
   return payload.fields
 }
 
-const fieldSchema = (ir: Ir, field: IrField): string => {
-  const name = isRelation(field) ? relationFkName(field) : field.name
+const fieldChain = (ir: Ir, field: IrField, seen: ReadonlySet<string>): string => {
   let schema: string
   if (isRelation(field)) {
     schema = SCALAR_ZOD[relationFkType(ir, field)]
@@ -36,6 +35,19 @@ const fieldSchema = (ir: Ir, field: IrField): string => {
     const enumName = field.type.name
     const irEnum = ir.enums.find(e => e.name === enumName)
     schema = irEnum ? `z.enum([${irEnum.values.map(singleQuote).join(', ')}])` : 'z.string()'
+  } else if (field.type.kind === 'model') {
+    // Embedded value objects expand to a structural z.object so request payloads
+    // validate all the way down; cycles fall back to z.unknown().
+    const model = findModel(ir, field.type.name)
+    if (model && !seen.has(model.name)) {
+      const nested = new Set([...seen, model.name])
+      const body = model.fields
+        .map(f => `${isRelation(f) ? relationFkName(f) : f.name}: ${fieldChain(ir, f, nested)}`)
+        .join(', ')
+      schema = `z.object({ ${body} })`
+    } else {
+      schema = 'z.unknown()'
+    }
   } else {
     schema = 'z.unknown()'
   }
@@ -43,7 +55,12 @@ const fieldSchema = (ir: Ir, field: IrField): string => {
   schema = field.list ? `z.array(${schema})${cons}` : `${schema}${cons}`
   if (field.nullable) schema = `${schema}.nullable()`
   if (field.optional) schema = `${schema}.optional()`
-  return `  ${name}: ${schema},`
+  return schema
+}
+
+const fieldSchema = (ir: Ir, field: IrField): string => {
+  const name = isRelation(field) ? relationFkName(field) : field.name
+  return `  ${name}: ${fieldChain(ir, field, new Set())},`
 }
 
 const renderRequestSchema = (ir: Ir, api: IrApi): string => {

@@ -81,21 +81,30 @@ const decoratorsFor = (ir: Ir, field: IrField, used: Set<string>): string[] => {
   return out
 }
 
+const jsdoc = (description: string | undefined, indent: string): string => {
+  if (!description) return ''
+  const lines = description.split('\n')
+  if (lines.length === 1) return `${indent}/** ${lines[0]} */\n`
+  return `${indent}/**\n${lines.map(line => `${indent} * ${line}`.trimEnd()).join('\n')}\n${indent} */\n`
+}
+
 const renderDto = (ir: Ir, api: IrApi, used: Set<string>): string => {
   const fields = payloadFields(ir, api.request)
   const className = `${pascalCase(api.name)}Dto`
+  const doc = jsdoc(api.description, '')
   if (api.request.isVoid || fields.length === 0) {
-    return `export class ${className} {}`
+    return `${doc}export class ${className} {}`
   }
   const members = fields
     .map(field => {
       const name = isRelation(field) ? relationFkName(field) : field.name
       const decorators = decoratorsFor(ir, field, used).join('\n')
       const mark = field.optional ? '?' : '!'
-      return `${decorators}\n  ${name}${mark}: ${propType(ir, field)}`
+      const nullable = field.nullable ? ' | null' : ''
+      return `${jsdoc(field.description, '  ')}${decorators}\n  ${name}${mark}: ${propType(ir, field)}${nullable}`
     })
     .join('\n\n')
-  return `export class ${className} {\n${members}\n}`
+  return `${doc}export class ${className} {\n${members}\n}`
 }
 
 /**
@@ -107,11 +116,13 @@ export const createApiDtoGenerator = (): Generator => ({
   name: 'api-dto',
   description: 'class-validator DTO classes for API requests',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    if (ir.apis.length === 0) {
+    // DTO は HTTP リクエストボディ用 — task / pubsub のペイロードは task-payloads が担う。
+    const httpApis = ir.apis.filter(api => api.kind === 'https' || api.kind === 'callable')
+    if (httpApis.length === 0) {
       return []
     }
     const used = new Set<string>()
-    const dtoBlocks = ir.apis.map(api => renderDto(ir, api, used))
+    const dtoBlocks = httpApis.map(api => renderDto(ir, api, used))
     const blocks: string[] = [...headerBlocks(context)]
     if (used.size > 0) {
       blocks.push(`import { ${[...used].sort().join(', ')} } from 'class-validator'`)

@@ -1,0 +1,60 @@
+{
+  "name": "firebase-contract",
+  "version": "0.1.0-rc.0",
+  "type": "module",
+  "bin": {
+    "firebase-contract": "./dist/lib/cli/index.js",
+    "fbc": "./dist/lib/cli/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cilly-yllic/my-packages.git"
+  },
+  "keywords": [
+    "firebase",
+    "contract",
+    "codegen",
+    "yaml",
+    "typescript",
+    "zod",
+    "data-connect",
+    "firestore",
+    "schema"
+  ],
+  "author": "cilly",
+  "license": "MIT",
+  "publishConfig": {
+    "tag": "rc"
+  },
+  "bugs": {
+    "url": "https://github.com/cilly-yllic/my-packages/issues"
+  },
+  "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/firebase-contract/README.md",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@my-packages/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./runtime": {
+      "@my-packages/source": "./src/lib/modules/runtime.ts",
+      "types": "./dist/lib/modules/runtime.d.ts",
+      "import": "./dist/lib/modules/runtime.js",
+      "default": "./dist/lib/modules/runtime.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
+  "dependencies": {
+    "commander": "^15.0.0",
+    "tslib": "^2.3.0",
+    "yaml": "^2.6.1"
+  }
+}

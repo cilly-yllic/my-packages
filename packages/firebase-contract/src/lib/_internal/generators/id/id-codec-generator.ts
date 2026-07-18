@@ -123,7 +123,7 @@ const renderCodec = (model: IrModel, field: IrField): string => {
  * make the int↔string boundary explicit and entity-safe.
  */
 export const createIdCodecGenerator = (options: IdCodecGeneratorOptions = {}): Generator => {
-  const core = options.core ?? './id-core.js'
+  const core = options.core ?? './id-core'
   return {
     name: 'id-codecs',
     description: 'Typed per-entity id encode/decode wrappers',
@@ -146,7 +146,7 @@ export const createIdCodecGenerator = (options: IdCodecGeneratorOptions = {}): G
       }
       const files: GeneratedFile[] = [{ path: 'id-codecs.ts', content: `${blocks.join('\n\n')}\n` }]
       // Emit the primitives too when the contract pins the Sqids settings.
-      if (ir.project?.idCodec && core === './id-core.js') {
+      if (ir.project?.idCodec && core === './id-core') {
         files.push({ path: 'id-core.ts', content: idCoreFile(ir.project.idCodec) })
       }
       return files

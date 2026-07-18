@@ -39,7 +39,7 @@ const irOf = (): Ir => buildIr([parseContract(SAMPLE, '/c.yml')]).ir
 describe('G: per-entity id codecs', () => {
   it('emits numeric codec for Int64 ids and string codec for string ids', () => {
     const [file] = createIdCodecGenerator().generate(irOf())
-    expect(file.content).toContain("import { encodeNumericId, decodeNumericId, encodeStringId, decodeStringId } from './id-core.js'")
+    expect(file.content).toContain("import { encodeNumericId, decodeNumericId, encodeStringId, decodeStringId } from './id-core'")
     expect(file.content).toContain('export const encodeShopId = (id: number | string): string => encodeNumericId(String(id))')
     expect(file.content).toContain('export const decodeShopId = (encoded: string): string => decodeNumericId(encoded)')
     expect(file.content).toContain('export const encodeUserId = (id: string): string => encodeStringId(id)')
@@ -54,11 +54,10 @@ describe('G: per-entity id codecs', () => {
 describe('I: discriminated unions', () => {
   it('emits z.discriminatedUnion + TS union referencing variant schemas/types', () => {
     const [file] = createUnionGenerator().generate(irOf())
-    expect(file.content).toContain("import { AddLinkOperationSchema, CutLinkOperationSchema } from './schemas.js'")
-    expect(file.content).toContain("import type { AddLinkOperation, CutLinkOperation } from './types.js'")
+    expect(file.content).toContain("import { AddLinkOperationSchema, CutLinkOperationSchema } from './schemas'")
     expect(file.content).toContain(
       "export const CatalogOperationDraftSchema = z.discriminatedUnion('operationType', [AddLinkOperationSchema, CutLinkOperationSchema])"
     )
-    expect(file.content).toContain('export type CatalogOperationDraft = AddLinkOperation | CutLinkOperation')
+    expect(file.content).toContain('export type CatalogOperationDraft = z.infer<typeof CatalogOperationDraftSchema>')
   })
 })

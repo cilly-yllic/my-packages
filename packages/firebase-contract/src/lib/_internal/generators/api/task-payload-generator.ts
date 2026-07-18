@@ -29,7 +29,9 @@ const fieldTs = (ir: Ir, field: IrField): string => {
 
 const renderMember = (ir: Ir, field: IrField): string => {
   const name = isRelation(field) ? relationFkName(field) : field.name
-  return `  ${name}${field.optional ? '?' : ''}: ${fieldTs(ir, field)}`
+  const doc = field.description ? `  /** ${field.description} */\n` : ''
+  const nullable = field.nullable ? ' | null' : ''
+  return `${doc}  ${name}${field.optional ? '?' : ''}: ${fieldTs(ir, field)}${nullable}`
 }
 
 const payloadFields = (ir: Ir, payload: IrApiPayload): IrField[] =>
@@ -89,7 +91,7 @@ export const createTaskPayloadGenerator = (): Generator => ({
     const blocks: string[] = [...headerBlocks(context)]
     const imports = collectImports(ir, tasks)
     if (imports.length > 0) {
-      blocks.push(`import type { ${imports.join(', ')} } from './types.js'`)
+      blocks.push(`import type { ${imports.join(', ')} } from './types'`)
     }
     for (const env of ir.envelopes) {
       blocks.push(renderEnvelope(env))

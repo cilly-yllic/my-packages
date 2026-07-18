@@ -33,8 +33,9 @@ const renderFieldTsType = (ir: Ir, field: IrField): string => {
 const renderField = (ir: Ir, field: IrField): string => {
   const name = isRelation(field) ? relationFkName(field) : field.name
   const optional = field.optional ? '?' : ''
+  const nullable = field.nullable ? ' | null' : ''
   const doc = field.description ? `  /** ${field.description} */\n` : ''
-  return `${doc}  ${name}${optional}: ${renderFieldTsType(ir, field)}`
+  return `${doc}  ${name}${optional}: ${renderFieldTsType(ir, field)}${nullable}`
 }
 
 const renderPayloadType = (ir: Ir, payload: IrApiPayload, typeName: string): string => {
@@ -93,7 +94,7 @@ export const createApiTypesGenerator = (): Generator => ({
     const blocks: string[] = [...headerBlocks(context)]
     const imports = collectImports(ir)
     if (imports.length > 0) {
-      blocks.push(`import type { ${imports.join(', ')} } from './types.js'`)
+      blocks.push(`import type { ${imports.join(', ')} } from './types'`)
     }
     for (const api of ir.apis) {
       const pascal = pascalCase(api.name)

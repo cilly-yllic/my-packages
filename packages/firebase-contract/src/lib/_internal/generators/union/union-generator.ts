@@ -7,11 +7,12 @@ const schemaName = (name: string): string => `${name}Schema`
 
 const renderUnion = (union: IrUnion): string => {
   const variantSchemas = union.variants.map(schemaName).join(', ')
-  const variantTypes = union.variants.join(' | ') || 'never'
   const doc = union.description ? `/** ${union.description} */\n` : ''
+  // The type derives from the schema (z.infer) so schema-parsed values are
+  // always assignable, regardless of the consumer's strictness settings.
   return [
     `${doc}export const ${schemaName(union.name)} = z.discriminatedUnion(${singleQuote(union.discriminant)}, [${variantSchemas}])`,
-    `export type ${union.name} = ${variantTypes}`,
+    `export type ${union.name} = z.infer<typeof ${schemaName(union.name)}>`,
   ].join('\n')
 }
 
@@ -31,10 +32,7 @@ export const createUnionGenerator = (): Generator => ({
     const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
     if (variantNames.length > 0) {
       // One import block — a blank line between relative imports trips import/order.
-      blocks.push(
-        `import { ${variantNames.map(schemaName).join(', ')} } from './schemas.js'\n` +
-          `import type { ${variantNames.join(', ')} } from './types.js'`
-      )
+      blocks.push(`import { ${variantNames.map(schemaName).join(', ')} } from './schemas'`)
     }
     for (const union of ir.unions) {
       blocks.push(renderUnion(union))

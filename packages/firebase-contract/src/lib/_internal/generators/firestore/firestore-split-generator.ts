@@ -127,7 +127,7 @@ const renderEmbeddedModel = (ir: Ir, model: IrModel): string => {
   return lines.join('\n')
 }
 
-// zod-split と同じ DC 側チェーン。FS 側と文字列一致するフィールドは
+// zod の split layout と同じ DC 側チェーン。FS 側と文字列一致するフィールドは
 // `.pick()` で DC スキーマから流用できる。
 const SCALAR_DC: Record<ScalarType, string> = {
   string: 'z.string()',

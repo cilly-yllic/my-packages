@@ -30,18 +30,25 @@ models:
 const irOf = (): Ir => buildIr([parseContract(SAMPLE, '/c.yml')]).ir
 
 describe('E: SQL migration generator', () => {
-  it('emits ALTER TABLE / CREATE INDEX for composite FK, CHECK, and indexes', () => {
+  it('emits idempotent ALTER TABLE / CREATE INDEX for composite FK, CHECK, and indexes', () => {
     const files = createSqlMigrationGenerator().generate(irOf())
     expect(files).toHaveLength(1)
     const [file] = files
     expect(file.path).toBe('migrations/constraints.sql')
     expect(file.content).toContain(
-      'ALTER TABLE "product_links" ADD CONSTRAINT "product_links_chk_1" CHECK (parent_product_no != child_product_no);'
+      [
+        'DO $$ BEGIN',
+        '  ALTER TABLE "product_links" ADD CONSTRAINT "product_links_chk_1" CHECK (parent_product_no != child_product_no);',
+        'EXCEPTION WHEN duplicate_object THEN NULL;',
+        'END $$;',
+      ].join('\n')
     )
     expect(file.content).toContain(
       'ALTER TABLE "product_links" ADD CONSTRAINT "product_links_catalog_id_parent_product_no_fkey" FOREIGN KEY ("catalog_id", "parent_product_no") REFERENCES products(catalog_id, product_no);'
     )
-    expect(file.content).toContain('CREATE INDEX "product_links_catalog_id_child_product_no_idx" ON "product_links" ("catalog_id", "child_product_no");')
+    expect(file.content).toContain('CREATE INDEX IF NOT EXISTS "product_links_catalog_id_child_product_no_idx" ON "product_links" ("catalog_id", "child_product_no");')
+    // every constraint statement is guarded → whole-file reruns are no-ops
+    expect(file.content.match(/DO \$\$ BEGIN/g)).toHaveLength(3)
   })
 
   it('emits nothing when no model declares sql constraints', () => {

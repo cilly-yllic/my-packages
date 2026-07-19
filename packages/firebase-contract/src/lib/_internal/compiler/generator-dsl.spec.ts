@@ -554,3 +554,44 @@ models:
     expect(paths).not.toContain('/proj/libs/contracts/src/api-types/bundled.ts')
   })
 })
+
+describe('multi-line descriptions (literal-block yml)', () => {
+  const root = `
+generators:
+  - { generator: api-types, out: gen }
+  - { generator: api-dto, out: gen }
+apis:
+  POST /things:
+    operationId: createThing
+    description: |-
+      First line of the endpoint description.
+      Second line kept verbatim.
+    generators: [api-types, api-dto]
+    request:
+      fields:
+        name:
+          type: string
+          description: |-
+            field doc line 1
+            field doc line 2
+    response:
+      void: true
+`
+
+  it('renders block JSDoc and multi-line // comments instead of folding to one line', () => {
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root }),
+    })
+    expect(result.ok).toBe(true)
+    const files = result.targets.flatMap(t => t.files)
+    const dto = files.find(f => f.path.endsWith('create-thing.dto.ts'))
+    expect(dto?.content).toContain(
+      '/**\n * First line of the endpoint description.\n * Second line kept verbatim.\n */'
+    )
+    expect(dto?.content).toContain('  /**\n   * field doc line 1\n   * field doc line 2\n   */')
+    const types = files.find(f => f.path.endsWith('api-types.ts'))
+    expect(types?.content).toContain(
+      '// createThing — kind: https | method: POST\n// First line of the endpoint description.\n// Second line kept verbatim.'
+    )
+  })
+})

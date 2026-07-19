@@ -3,6 +3,7 @@ import { constantCase, pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { jsdoc } from '../support/jsdoc.js'
 import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -30,16 +31,15 @@ const fieldTs = (ir: Ir, field: IrField): string => {
 
 const renderMember = (ir: Ir, field: IrField): string => {
   const name = isRelation(field) ? relationFkName(field) : field.name
-  const doc = field.description ? `  /** ${field.description} */\n` : ''
   const nullable = field.nullable ? ' | null' : ''
-  return `${doc}  ${name}${field.optional ? '?' : ''}: ${fieldTs(ir, field)}${nullable}`
+  return `${jsdoc(field.description, '  ')}  ${name}${field.optional ? '?' : ''}: ${fieldTs(ir, field)}${nullable}`
 }
 
 const payloadFields = (ir: Ir, payload: IrApiPayload): IrField[] =>
   payload.model ? (findModel(ir, payload.model)?.fields ?? []) : payload.fields
 
 const renderEnvelope = (env: IrEnvelope): string => {
-  const doc = env.description ? `/** ${env.description} */\n` : ''
+  const doc = jsdoc(env.description, '')
   const members = env.fields.map(field => `  ${field.name}${field.optional ? '?' : ''}: ${SCALAR_TS[field.type.kind === 'scalar' ? field.type.name : 'string']}`).join('\n')
   return `${doc}export type ${env.name}<T> = T & {\n${members}\n}`
 }

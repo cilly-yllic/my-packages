@@ -3,6 +3,7 @@ import { pascalCase } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { jsdoc } from '../support/jsdoc.js'
 import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -35,8 +36,7 @@ const renderField = (ir: Ir, field: IrField): string => {
   const name = isRelation(field) ? relationFkName(field) : field.name
   const optional = field.optional ? '?' : ''
   const nullable = field.nullable ? ' | null' : ''
-  const doc = field.description ? `  /** ${field.description} */\n` : ''
-  return `${doc}  ${name}${optional}: ${renderFieldTsType(ir, field)}${nullable}`
+  return `${jsdoc(field.description, '  ')}  ${name}${optional}: ${renderFieldTsType(ir, field)}${nullable}`
 }
 
 const renderPayloadType = (ir: Ir, payload: IrApiPayload, typeName: string): string => {
@@ -76,8 +76,14 @@ const collectImports = (ir: Ir, apis: IrApi[]): string[] => {
 const apiComment = (api: IrApi): string => {
   const bits = [`kind: ${api.kind}`]
   if (api.method) bits.push(`method: ${api.method}`)
-  if (api.description) bits.unshift(api.description)
-  return `// ${api.name} — ${bits.join(' | ')}`
+  const description = api.description?.split('\n') ?? []
+  // Single-line descriptions stay inline; multi-line ones get their own
+  // comment lines so literal-block yml descriptions survive verbatim.
+  if (description.length <= 1) {
+    if (description[0]) bits.unshift(description[0])
+    return `// ${api.name} — ${bits.join(' | ')}`
+  }
+  return [`// ${api.name} — ${bits.join(' | ')}`, ...description.map(line => `// ${line}`.trimEnd())].join('\n')
 }
 
 /**

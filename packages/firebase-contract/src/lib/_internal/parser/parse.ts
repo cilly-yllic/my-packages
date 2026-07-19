@@ -14,6 +14,9 @@ import {
   RawOperation,
   RawProject,
   RawService,
+  RawGeneratorDecl,
+  RawGeneratorUse,
+  RawSectionDefaults,
   RawUnion,
 } from './raw-document.js'
 
@@ -376,6 +379,97 @@ const normalizeApi = (raw: unknown, filePath: string, name: string): RawApi => {
   return api
 }
 
+const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): RawGeneratorUse => {
+  if (typeof raw === 'string') return { generator: raw }
+  if (!isObject(raw) || typeof raw.generator !== 'string') {
+    return fail(`"${path}" must be a generator name or { generator, out? }`, filePath, path)
+  }
+  const use: RawGeneratorUse = { generator: raw.generator }
+  if (raw.out !== undefined) use.out = String(raw.out)
+  return use
+}
+
+const normalizeGeneratorUses = (raw: unknown, filePath: string, path: string): RawGeneratorUse[] => {
+  if (!Array.isArray(raw)) {
+    return fail(`"${path}" must be an array of generator applications`, filePath, path)
+  }
+  return raw.map((entry, i) => normalizeGeneratorUse(entry, filePath, `${path}[${i}]`))
+}
+
+/** Reserved key inside `apis:/tasks:/events:` holding section-level defaults. */
+const SECTION_DEFAULTS_KEY = 'defaults'
+
+const normalizeSectionDefaults = (raw: unknown, filePath: string, section: string): RawGeneratorUse[] => {
+  if (!isObject(raw)) {
+    return fail(`"${section}.${SECTION_DEFAULTS_KEY}" must be an object`, filePath, `${section}.${SECTION_DEFAULTS_KEY}`)
+  }
+  if (raw.generators === undefined) return []
+  return normalizeGeneratorUses(raw.generators, filePath, `${section}.${SECTION_DEFAULTS_KEY}.generators`)
+}
+
+/**
+ * Path-keyed api entry (`apis:` section, key starts with `/`): kind defaults to
+ * `https` (or `callable` when declared), `operationId` names the generated types.
+ */
+const normalizePathApi = (raw: unknown, filePath: string, pathKey: string): { name: string; api: RawApi } => {
+  if (!isObject(raw)) {
+    return fail(`Api "${pathKey}" must be an object`, filePath, `apis.${pathKey}`)
+  }
+  if (typeof raw.operationId !== 'string' || raw.operationId.length === 0) {
+    return fail(`Api "${pathKey}" is missing a string "operationId" (used as the generated name)`, filePath, `apis.${pathKey}.operationId`)
+  }
+  const kind = raw.kind === undefined ? 'https' : String(raw.kind)
+  if (kind !== 'https' && kind !== 'callable') {
+    return fail(`Api "${pathKey}" kind must be https|callable (tasks/events have their own sections)`, filePath, `apis.${pathKey}.kind`)
+  }
+  const api: RawApi = { kind, path: pathKey }
+  if (raw.method !== undefined) api.method = String(raw.method)
+  if (raw.description !== undefined) api.description = String(raw.description)
+  api.request = normalizeApiPayload(raw.request, filePath, `apis.${pathKey}.request`)
+  api.response = normalizeApiPayload(raw.response, filePath, `apis.${pathKey}.response`)
+  if (raw.generators !== undefined) {
+    api.generators = normalizeGeneratorUses(raw.generators, filePath, `apis.${pathKey}.generators`)
+  }
+  return { name: raw.operationId, api }
+}
+
+/** `tasks:` section entry — a Cloud Task api (kind is implied, key is the name). */
+const normalizeTask = (raw: unknown, filePath: string, name: string): RawApi => {
+  if (!isObject(raw)) {
+    return fail(`Task "${name}" must be an object`, filePath, `tasks.${name}`)
+  }
+  const api: RawApi = { kind: 'task' }
+  if (raw.description !== undefined) api.description = String(raw.description)
+  if (raw.envelope !== undefined) api.envelope = String(raw.envelope)
+  if (raw.maxAttempts !== undefined) api.maxAttempts = Number(raw.maxAttempts)
+  if (raw.timeoutSeconds !== undefined) api.timeoutSeconds = Number(raw.timeoutSeconds)
+  api.request = normalizeApiPayload(raw.request, filePath, `tasks.${name}.request`)
+  api.response = normalizeApiPayload(raw.response, filePath, `tasks.${name}.response`)
+  if (raw.generators !== undefined) {
+    api.generators = normalizeGeneratorUses(raw.generators, filePath, `tasks.${name}.generators`)
+  }
+  return api
+}
+
+/** `events:` section entry — a Pub/Sub api (kind is implied, key is the name). */
+const normalizeEvent = (raw: unknown, filePath: string, name: string): RawApi => {
+  if (!isObject(raw)) {
+    return fail(`Event "${name}" must be an object`, filePath, `events.${name}`)
+  }
+  const api: RawApi = { kind: 'pubsub' }
+  if (raw.description !== undefined) api.description = String(raw.description)
+  if (raw.envelope !== undefined) api.envelope = String(raw.envelope)
+  if (raw.maxAttempts !== undefined) api.maxAttempts = Number(raw.maxAttempts)
+  if (raw.timeoutSeconds !== undefined) api.timeoutSeconds = Number(raw.timeoutSeconds)
+  if (raw.topic !== undefined) api.topic = String(raw.topic)
+  api.request = normalizeApiPayload(raw.request, filePath, `events.${name}.request`)
+  api.response = normalizeApiPayload(raw.response, filePath, `events.${name}.response`)
+  if (raw.generators !== undefined) {
+    api.generators = normalizeGeneratorUses(raw.generators, filePath, `events.${name}.generators`)
+  }
+  return api
+}
+
 const normalizeEnvelope = (raw: unknown, filePath: string, name: string): RawEnvelope => {
   if (!isObject(raw)) {
     return fail(`Envelope "${name}" must be an object`, filePath, `envelopes.${name}`)
@@ -468,6 +562,16 @@ const normalizeProject = (raw: unknown, filePath: string): RawProject => {
     if (raw.idCodec.minLength !== undefined) idCodec.minLength = Number(raw.idCodec.minLength)
     if (raw.idCodec.alphabet !== undefined) idCodec.alphabet = String(raw.idCodec.alphabet)
     project.idCodec = idCodec
+  }
+  if (raw.aliases !== undefined) {
+    if (!isObject(raw.aliases)) {
+      return fail('"project.aliases" must be a mapping of alias → path', filePath, 'project.aliases')
+    }
+    const aliases: Record<string, string> = {}
+    for (const [alias, target] of Object.entries(raw.aliases)) {
+      aliases[alias] = String(target)
+    }
+    project.aliases = aliases
   }
   return project
 }
@@ -565,12 +669,52 @@ export const parseContract = (content: string, filePath: string): RawContract =>
   }
 
   const apis: Record<string, RawApi> = {}
+  const sectionDefaults: RawSectionDefaults = {}
+  const addApi = (name: string, api: RawApi, section: string): void => {
+    if (apis[name] !== undefined) {
+      fail(`Api "${name}" is declared more than once across apis/tasks/events`, filePath, `${section}.${name}`)
+    }
+    apis[name] = api
+  }
   if (doc.apis !== undefined) {
     if (!isObject(doc.apis)) {
       return fail('"apis" must be a mapping', filePath, 'apis')
     }
-    for (const [name, raw] of Object.entries(doc.apis)) {
-      apis[name] = normalizeApi(raw, filePath, name)
+    for (const [key, raw] of Object.entries(doc.apis)) {
+      if (key === SECTION_DEFAULTS_KEY) {
+        sectionDefaults.apis = normalizeSectionDefaults(raw, filePath, 'apis')
+      } else if (key.startsWith('/')) {
+        // Path-keyed REST form: the key is the route, `operationId` names the api.
+        const { name, api } = normalizePathApi(raw, filePath, key)
+        addApi(name, api, 'apis')
+      } else {
+        // Legacy name-keyed form with an explicit `kind` (kept for migration).
+        addApi(key, normalizeApi(raw, filePath, key), 'apis')
+      }
+    }
+  }
+  if (doc.tasks !== undefined) {
+    if (!isObject(doc.tasks)) {
+      return fail('"tasks" must be a mapping', filePath, 'tasks')
+    }
+    for (const [name, raw] of Object.entries(doc.tasks)) {
+      if (name === SECTION_DEFAULTS_KEY) {
+        sectionDefaults.tasks = normalizeSectionDefaults(raw, filePath, 'tasks')
+      } else {
+        addApi(name, normalizeTask(raw, filePath, name), 'tasks')
+      }
+    }
+  }
+  if (doc.events !== undefined) {
+    if (!isObject(doc.events)) {
+      return fail('"events" must be a mapping', filePath, 'events')
+    }
+    for (const [name, raw] of Object.entries(doc.events)) {
+      if (name === SECTION_DEFAULTS_KEY) {
+        sectionDefaults.events = normalizeSectionDefaults(raw, filePath, 'events')
+      } else {
+        addApi(name, normalizeEvent(raw, filePath, name), 'events')
+      }
     }
   }
 
@@ -635,6 +779,23 @@ export const parseContract = (content: string, filePath: string): RawContract =>
       }
       return { out: entry.out, generators: asStringArray(entry.generators, filePath, `generate[${i}].generators`) }
     })
+  }
+  if (doc.generators !== undefined) {
+    if (!Array.isArray(doc.generators)) {
+      return fail('"generators" must be an array of { generator, out } declarations', filePath, 'generators')
+    }
+    contract.generatorDecls = doc.generators.map((entry, i): RawGeneratorDecl => {
+      if (!isObject(entry) || typeof entry.generator !== 'string') {
+        return fail(`generators[${i}] needs a string "generator"`, filePath, `generators[${i}]`)
+      }
+      if (typeof entry.out !== 'string') {
+        return fail(`generators[${i}] needs a string "out"`, filePath, `generators[${i}].out`)
+      }
+      return { generator: entry.generator, out: entry.out }
+    })
+  }
+  if (Object.keys(sectionDefaults).length > 0) {
+    contract.sectionDefaults = sectionDefaults
   }
   return contract
 }

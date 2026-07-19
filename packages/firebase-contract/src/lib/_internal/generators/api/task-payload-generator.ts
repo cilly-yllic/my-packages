@@ -1,7 +1,7 @@
 import { findModel, Ir, IrApi, IrApiPayload, IrEnvelope, IrField, ScalarType } from '../../ir/ir.js'
 import { constantCase, pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
-import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
+import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -82,9 +82,10 @@ const collectImports = (ir: Ir, tasks: IrApi[]): string[] => {
  */
 export const createTaskPayloadGenerator = (): Generator => ({
   name: 'task-payloads',
+  scope: 'api',
   description: 'Cloud Task/Pub-Sub payload envelopes, data/payload types, and constants',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    const tasks = ir.apis.filter(isTask)
+    const tasks = selectApis(ir.apis, context).filter(isTask)
     if (ir.envelopes.length === 0 && tasks.length === 0) {
       return []
     }

@@ -38,29 +38,44 @@ fbc inspect       # print the normalized IR (debugging)
 
 ### One-command generation
 
-Each contract file can declare its own outputs in a `generate:` section —
-out dirs are relative to that yml file:
-
-```yaml
-# apps/shop/data-connect/schema.yml
-generate:
-  - { out: src, generators: [data-connect-graphql-split] }
-  - { out: ., generators: [sql-migrations] }
-```
+Each contract file declares the generators it uses in a top-level
+`generators:` block — a name plus an output template. Declaring a
+**document-scoped** generator (typescript-split, zod-split, …) runs it once for
+that yml; **api-scoped** generators (api-types, api-validation, api-dto,
+task-payloads) run for the entries that opt in (see below):
 
 ```yaml
 # contract.yml (root)
-generate:
-  - out: libs/contracts/src
-    generators: [typescript-split, zod-split, firestore-split, id-codecs]
+project:
+  aliases:
+    "#contracts/*": libs/contracts/src/*   # out templates may target aliases
+generators:
+  - { generator: typescript-split, out: "#contracts" }
+  - { generator: api-types, out: "#contracts/api-types/{api-name}" }
 imports:
   - ./apps/shop/data-connect/schema.yml
 ```
 
-`fbc generate contract.yml` then materializes **all** targets across the whole
-import graph in one run. Passing `-o`/`-g` switches to single-target mode
+```yaml
+# apps/shop/data-connect/schema.yml
+generators:
+  - { generator: data-connect-graphql-split, out: src }
+  - { generator: sql-migrations, out: . }
+```
+
+- `out` resolves relative to the declaring yml; `#alias/...` prefixes resolve
+  through the **root** yml's `project.aliases` (relative to the root).
+- Api-scoped templates may use `{api-name}` (kebab-cased name) and `{path}`
+  (REST path with `{param}` segments dropped).
+- Entries reference declarations by name — nearest first (same yml → root).
+
+`fbc generate contract.yml` materializes **all** declared outputs across the
+whole import graph in one run. Passing `-o`/`-g` switches to single-target mode
 (`fbc generate <entry> -o <dir> -g typescript,zod`), and
 `firebase-contract.json` (`entry`, `outDir`, `generators`) can hold defaults.
+
+> The previous `generate:` (`{ out, generators[] }` targets) form still works
+> and is kept for migration.
 
 ### Generated-file headers
 
@@ -310,9 +325,10 @@ envelopes:
       opId: string
       enqueuedAt: int
 
-apis:
+tasks:                                     # Cloud Tasks (kind implied)
+  defaults:
+    generators: [task-payloads]            # section default: applies to entries below
   createCatalog:
-    kind: task                             # product | callable | https | pubsub
     envelope: RetryTaskPayload             # wraps the product data
     maxAttempts: 3
     request:
@@ -322,16 +338,29 @@ apis:
     response:
       void: true
 
+events:                                    # Pub/Sub (kind implied)
   generateAiResponse:
-    kind: pubsub
     topic: ai-review-generate-response
     timeoutSeconds: 540
+    generators: [task-payloads]
 
-  getShopBySlug:
-    kind: callable
+apis:                                      # https/callable, keyed by REST path
+  defaults:
+    generators: [api-types, api-validation]
+  /shops/{slug}:
+    operationId: getShopBySlug
+    kind: callable                         # https (default) | callable
     request: { fields: { slug: { type: string, nonempty: true } } }
     response: { model: Shop }
+    generators:                            # entry-level wins over section defaults;
+      - api-types                          # an inline out overrides the declared template
+      - { generator: api-dto, out: "src/entries/{path}" }
 ```
+
+Generator application resolves in two tiers — the section `defaults`
+(`apis:/tasks:/events:` → `defaults.generators`) and the entry's own
+`generators:` (which replaces the defaults). Name-keyed entries with an
+explicit `kind:` are still accepted inside `apis:` for migration.
 
 For `createCatalog` this yields `CreateCatalogTaskData`, `CreateCatalogTaskPayload =
 RetryTaskPayload<CreateCatalogTaskData>`, and `CREATE_CATALOG_MAX_ATTEMPTS`, plus the

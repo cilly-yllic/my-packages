@@ -109,12 +109,40 @@ export interface RawApi {
   description?: string
   kind: string
   method?: string
+  /** REST path when declared under the path-keyed `apis:` section (e.g. `/ai-models/{model-id}`). */
+  path?: string
   request?: RawApiPayload
   response?: RawApiPayload
   envelope?: string
   maxAttempts?: number
   timeoutSeconds?: number
   topic?: string
+  /** Entry-level generator applications (overrides the section defaults). */
+  generators?: RawGeneratorUse[]
+}
+
+/** Top-level generator declaration: registry id + default output template. */
+export interface RawGeneratorDecl {
+  generator: string
+  /**
+   * Output template relative to the declaring yml. Supports `{api-name}` /
+   * `{path}` placeholders (api-scoped generators) and `#alias/...` prefixes
+   * resolved through the root document's `project.aliases`.
+   */
+  out: string
+}
+
+/** Generator application on a section default or an entry (name ref + optional out override). */
+export interface RawGeneratorUse {
+  generator: string
+  out?: string
+}
+
+/** Per-section generator defaults (`apis:/tasks:/events:` → `defaults.generators`). */
+export interface RawSectionDefaults {
+  apis?: RawGeneratorUse[]
+  tasks?: RawGeneratorUse[]
+  events?: RawGeneratorUse[]
 }
 
 export interface RawEnvelope {
@@ -154,6 +182,11 @@ export interface RawProject {
   codebases?: Record<string, string>
   /** Sqids settings for the generated id-core (encode/decode primitives). */
   idCodec?: { minLength?: number; alphabet?: string }
+  /**
+   * Output path aliases resolved against the root yml's directory, e.g.
+   * `"#contracts/*": "libs/contracts/src/*"`. Used by `generators[].out`.
+   */
+  aliases?: Record<string, string>
 }
 
 /** A declared generation target: run `generators` into `out` (relative to the yml). */
@@ -165,8 +198,12 @@ export interface RawOutputTarget {
 export interface RawContract {
   /** Absolute path of the source file. */
   filePath: string
-  /** Generation targets declared in this file's `generate:` section. */
+  /** Generation targets declared in this file's `generate:` section (legacy form). */
   outputs?: RawOutputTarget[]
+  /** Generator declarations from this file's top-level `generators:` block. */
+  generatorDecls?: RawGeneratorDecl[]
+  /** Section-level generator defaults (`apis:/tasks:/events:` → `defaults`). */
+  sectionDefaults?: RawSectionDefaults
   version: number
   /** Raw header text prepended to generated files (`default` = built-in banner). */
   header?: string

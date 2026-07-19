@@ -3,6 +3,7 @@ import { pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { jsdoc } from '../support/jsdoc.js'
 import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -80,13 +81,6 @@ const decoratorsFor = (ir: Ir, field: IrField, used: Set<string>): string[] => {
     if (c.pattern) out.push(add('Matches', `/${c.pattern}/`))
   }
   return out
-}
-
-const jsdoc = (description: string | undefined, indent: string): string => {
-  if (!description) return ''
-  const lines = description.split('\n')
-  if (lines.length === 1) return `${indent}/** ${lines[0]} */\n`
-  return `${indent}/**\n${lines.map(line => `${indent} * ${line}`.trimEnd()).join('\n')}\n${indent} */\n`
 }
 
 const renderDto = (ir: Ir, api: IrApi, used: Set<string>): string => {

@@ -189,17 +189,9 @@ export interface RawProject {
   aliases?: Record<string, string>
 }
 
-/** A declared generation target: run `generators` into `out` (relative to the yml). */
-export interface RawOutputTarget {
-  out: string
-  generators: string[]
-}
-
 export interface RawContract {
   /** Absolute path of the source file. */
   filePath: string
-  /** Generation targets declared in this file's `generate:` section (legacy form). */
-  outputs?: RawOutputTarget[]
   /** Generator declarations from this file's top-level `generators:` block. */
   generatorDecls?: RawGeneratorDecl[]
   /** Section-level generator defaults (`apis:/tasks:/events:` → `defaults`). */

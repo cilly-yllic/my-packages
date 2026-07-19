@@ -74,8 +74,6 @@ whole import graph in one run. Passing `-o`/`-g` switches to single-target mode
 (`fbc generate <entry> -o <dir> -g typescript,zod`), and
 `firebase-contract.json` (`entry`, `outDir`, `generators`) can hold defaults.
 
-> The previous `generate:` (`{ out, generators[] }` targets) form still works
-> and is kept for migration.
 
 ### Generated-file headers
 
@@ -361,8 +359,9 @@ apis:                                      # https/callable, keyed by REST path
 
 Generator application resolves in two tiers — the section `defaults`
 (`apis:/tasks:/events:` → `defaults.generators`) and the entry's own
-`generators:` (which replaces the defaults). Name-keyed entries with an
-explicit `kind:` are still accepted inside `apis:` for migration.
+`generators:` (which replaces the defaults). `apis:` keys must be REST paths
+(`/...`) with an `operationId`; tasks and Pub/Sub events live in their own
+sections.
 
 For `createCatalog` this yields `CreateCatalogTaskData`, `CreateCatalogTaskPayload =
 RetryTaskPayload<CreateCatalogTaskData>`, and `CREATE_CATALOG_MAX_ATTEMPTS`, plus the
@@ -559,7 +558,7 @@ const result = generate('contract.yml', {
   write: true,
 })
 
-// Every `generate:` target declared across the import graph:
+// Every generator declared across the import graph:
 const all = generateAll('contract.yml', { write: true })
 ```
 

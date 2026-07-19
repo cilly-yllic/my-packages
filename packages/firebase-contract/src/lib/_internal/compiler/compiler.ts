@@ -219,10 +219,11 @@ const buildGeneratorJobs = (
 }
 
 /**
- * Run every `generate:` target declared across the entry contract and its
- * (transitive) imports — the one-command flow: each contract file states where
- * its own outputs go, and `fbc generate <root>` materializes all of them.
- * Output dirs resolve relative to the declaring yml file.
+ * Run every generator declared across the entry contract and its (transitive)
+ * imports — the one-command flow: each contract file declares its generators
+ * (`generators:` + section defaults / entry applications) and
+ * `fbc generate <root>` materializes all of them. Output dirs resolve relative
+ * to the declaring yml (or the root yml for `#alias/...` templates).
  */
 export const generateAll = (
   entryPath: string,
@@ -260,10 +261,6 @@ export const generateAll = (
     targets.push({ source: doc.filePath, outDir, generators, files: result.files })
   }
   for (const doc of documents) {
-    // Legacy `generate:` targets (kept for migration).
-    for (const output of doc.outputs ?? []) {
-      runTarget(doc, join(dirname(doc.filePath), output.out), output.generators)
-    }
     // Declaration/application DSL (`generators:` + section defaults / entry `generators:`).
     const jobDiagnostics: Diagnostic[] = []
     for (const job of buildGeneratorJobs(doc, rootDoc, registry, jobDiagnostics)) {

@@ -314,7 +314,11 @@ describe('parser: sections and declarations', () => {
   })
 
   it('rejects the same name declared across sections', () => {
-    const yml = 'apis:\n  a:\n    kind: https\n    request: {}\n    response: {}\ntasks:\n  a:\n    request: {}\n'
+    const yml = 'apis:\n  /a:\n    operationId: a\n    request: {}\n    response: {}\ntasks:\n  a:\n    request: {}\n'
     expect(() => parseContract(yml, '/c.yml')).toThrow(/more than once/)
+  })
+
+  it('rejects non-path keys in the apis section', () => {
+    expect(() => parseContract('apis:\n  createNote:\n    method: POST\n', '/c.yml')).toThrow(/REST paths/)
   })
 })

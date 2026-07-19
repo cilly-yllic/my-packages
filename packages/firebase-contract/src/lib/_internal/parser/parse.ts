@@ -360,25 +360,6 @@ const normalizeApiPayload = (raw: unknown, filePath: string, path: string): RawA
   return payload
 }
 
-const normalizeApi = (raw: unknown, filePath: string, name: string): RawApi => {
-  if (!isObject(raw)) {
-    return fail(`Api "${name}" must be an object`, filePath, `apis.${name}`)
-  }
-  if (typeof raw.kind !== 'string') {
-    return fail(`Api "${name}" is missing a string "kind" (callable|https|task|pubsub)`, filePath, `apis.${name}.kind`)
-  }
-  const api: RawApi = { kind: raw.kind }
-  if (raw.method !== undefined) api.method = String(raw.method)
-  if (raw.description !== undefined) api.description = String(raw.description)
-  if (raw.envelope !== undefined) api.envelope = String(raw.envelope)
-  if (raw.maxAttempts !== undefined) api.maxAttempts = Number(raw.maxAttempts)
-  if (raw.timeoutSeconds !== undefined) api.timeoutSeconds = Number(raw.timeoutSeconds)
-  if (raw.topic !== undefined) api.topic = String(raw.topic)
-  api.request = normalizeApiPayload(raw.request, filePath, `apis.${name}.request`)
-  api.response = normalizeApiPayload(raw.response, filePath, `apis.${name}.response`)
-  return api
-}
-
 const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): RawGeneratorUse => {
   if (typeof raw === 'string') return { generator: raw }
   if (!isObject(raw) || typeof raw.generator !== 'string') {
@@ -688,8 +669,7 @@ export const parseContract = (content: string, filePath: string): RawContract =>
         const { name, api } = normalizePathApi(raw, filePath, key)
         addApi(name, api, 'apis')
       } else {
-        // Legacy name-keyed form with an explicit `kind` (kept for migration).
-        addApi(key, normalizeApi(raw, filePath, key), 'apis')
+        fail(`"apis" keys must be REST paths starting with "/" (tasks/events have their own sections): "${key}"`, filePath, `apis.${key}`)
       }
     }
   }
@@ -768,17 +748,6 @@ export const parseContract = (content: string, filePath: string): RawContract =>
   }
   if (typeof doc.header === 'string') {
     contract.header = doc.header
-  }
-  if (doc.generate !== undefined) {
-    if (!Array.isArray(doc.generate)) {
-      return fail('"generate" must be an array of { out, generators } entries', filePath, 'generate')
-    }
-    contract.outputs = doc.generate.map((entry, i) => {
-      if (!isObject(entry) || typeof entry.out !== 'string') {
-        return fail(`generate[${i}] needs a string "out"`, filePath, `generate[${i}]`)
-      }
-      return { out: entry.out, generators: asStringArray(entry.generators, filePath, `generate[${i}].generators`) }
-    })
   }
   if (doc.generators !== undefined) {
     if (!Array.isArray(doc.generators)) {

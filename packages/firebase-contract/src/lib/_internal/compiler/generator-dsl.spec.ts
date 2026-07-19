@@ -135,6 +135,57 @@ describe('generator declaration/application DSL', () => {
   })
 })
 
+describe('document-scoped declarations (data-connect ymls etc.)', () => {
+  it('runs document-scoped generators declared in an imported schema yml', () => {
+    const root = `
+imports:
+  - ./dc/schema.yml
+`
+    const schema = `
+generators:
+  - { generator: data-connect-graphql, out: src }
+models:
+  Shop:
+    table: true
+    fields:
+      id: { type: id, id: true }
+      name: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/dc/schema.yml': schema }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/dc/schema.yml')
+    // out resolves relative to the declaring yml (the schema file), not the root
+    expect(target?.outDir).toBe('/proj/dc/src')
+    expect(target?.files.some(f => f.path.endsWith('.gql'))).toBe(true)
+  })
+
+  it('resolves #aliases from document-scoped declarations against the root yml', () => {
+    const root = `
+project:
+  aliases:
+    "#contracts/*": libs/contracts/src/*
+imports:
+  - ./dc/schema.yml
+`
+    const schema = `
+generators:
+  - { generator: typescript, out: "#contracts" }
+models:
+  Shop:
+    fields:
+      id: { type: id, id: true }
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/dc/schema.yml': schema }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/dc/schema.yml')
+    expect(target?.outDir).toBe('/proj/libs/contracts/src')
+  })
+})
+
 describe('parser: sections and declarations', () => {
   it('parses tasks/events into kind-implied apis and rejects duplicates', () => {
     const contract = parseContract(SERVICE, '/svc.yml')

@@ -590,7 +590,7 @@ project:
 | `api-validation`         | api | `api-validation.ts`           | endpoint request-validation Zod                        |
 | `api-dto`                | api | `<operation>.dto.ts` per api  | class-validator DTO classes (NestJS `dto/` convention) |
 | `task-payloads`          | api | `task-payloads.ts`            | envelopes + `*TaskData`/`*TaskPayload` + constants     |
-| `sql-migrations`         | document | `migrations/constraints.sql`  | composite FK / CHECK / index SQL                       |
+| `sql-migrations`         | document | `migrations/constraints.sql`  | composite FK / CHECK / index SQL — idempotent (`IF NOT EXISTS` / `duplicate_object` guard), safe to re-apply whole |
 | `id-codecs`              | document | `id-codecs.ts` (+ `id-core.ts`) | typed per-entity id encode/decode wrappers; emits the Sqids primitives when `project.idCodec` is set |
 | `unions`                 | document | `unions.ts`                   | Zod discriminated unions + TS union types              |
 | `config`                 | document | `dataconnect.yaml`, `connector.yaml`, `constants.ts` | DC configs + sync constants (preview — see [Project config](#project-config)) |

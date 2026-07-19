@@ -127,7 +127,7 @@ const renderEmbeddedModel = (ir: Ir, model: IrModel): string => {
   return lines.join('\n')
 }
 
-// zod-split と同じ DC 側チェーン。FS 側と文字列一致するフィールドは
+// zod の split layout と同じ DC 側チェーン。FS 側と文字列一致するフィールドは
 // `.pick()` で DC スキーマから流用できる。
 const SCALAR_DC: Record<ScalarType, string> = {
   string: 'z.string()',
@@ -240,8 +240,8 @@ const docModuleName = (doc: IrFirestoreDoc): string => camelCase(pluralize(doc.n
  * the `_meta_` envelope under `firestore/_/`, and a `firestore.ts` barrel that
  * also carries the `FIRESTORE_DATABASES` constants.
  */
-export const createFirestoreSplitGenerator = (): Generator => ({
-  name: 'firestore-split',
+export const createFirestoreSplitLayout = (): Generator => ({
+  name: 'firestore',
   description: 'Firestore projection Zod schemas, one file per collection (firestore/<name>.ts + firestore.ts barrel)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     if (ir.firestore.length === 0) return []

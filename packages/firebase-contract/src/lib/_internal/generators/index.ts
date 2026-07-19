@@ -4,34 +4,28 @@ import { createApiValidationGenerator } from './api/api-validation-generator.js'
 import { createTaskPayloadGenerator } from './api/task-payload-generator.js'
 import { createConfigGenerator } from './config/config-generator.js'
 import { createDataConnectAdapterGenerator } from './data-connect/adapter-generator.js'
-import { createDataConnectGraphqlGenerator, createDataConnectGraphqlSplitGenerator } from './data-connect/graphql-generator.js'
-import { createDataConnectOperationsGenerator, createDataConnectOperationsSplitGenerator } from './data-connect/operations-generator.js'
+import { createDataConnectGraphqlGenerator } from './data-connect/graphql-generator.js'
+import { createDataConnectOperationsGenerator } from './data-connect/operations-generator.js'
 import { createFirestoreProjectionGenerator } from './firestore/firestore-projection-generator.js'
-import { createFirestoreSplitGenerator } from './firestore/firestore-split-generator.js'
 import { createFirestoreTypeGenerator } from './firestore/firestore-type-generator.js'
 import { createIdCodecGenerator } from './id/id-codec-generator.js'
 import { createSqlMigrationGenerator } from './sql/sql-migration-generator.js'
 import { createUnionGenerator } from './union/union-generator.js'
 import { GeneratorRegistry } from './registry.js'
 import { createTypeScriptGenerator } from './typescript/typescript-generator.js'
-import { createTypeScriptSplitGenerator } from './typescript/typescript-split-generator.js'
 import { createZodGenerator } from './zod/zod-generator.js'
-import { createZodSplitGenerator } from './zod/zod-split-generator.js'
 
 export type { GeneratedFile, Generator, GeneratorContext } from './generator.js'
 export { GeneratorRegistry } from './registry.js'
 export { createTypeScriptGenerator } from './typescript/typescript-generator.js'
-export { createTypeScriptSplitGenerator } from './typescript/typescript-split-generator.js'
 export type { TypeScriptGeneratorOptions } from './typescript/typescript-generator.js'
 export { createZodGenerator } from './zod/zod-generator.js'
-export { createZodSplitGenerator } from './zod/zod-split-generator.js'
-export { createDataConnectGraphqlGenerator, createDataConnectGraphqlSplitGenerator } from './data-connect/graphql-generator.js'
+export { createDataConnectGraphqlGenerator } from './data-connect/graphql-generator.js'
 export { createDataConnectAdapterGenerator } from './data-connect/adapter-generator.js'
-export { createDataConnectOperationsGenerator, createDataConnectOperationsSplitGenerator } from './data-connect/operations-generator.js'
+export { createDataConnectOperationsGenerator } from './data-connect/operations-generator.js'
 export { createFirestoreTypeGenerator } from './firestore/firestore-type-generator.js'
 export type { FirestoreGeneratorOptions } from './firestore/firestore-type-generator.js'
 export { createFirestoreProjectionGenerator } from './firestore/firestore-projection-generator.js'
-export { createFirestoreSplitGenerator } from './firestore/firestore-split-generator.js'
 export { createApiTypesGenerator } from './api/api-types-generator.js'
 export { createApiValidationGenerator } from './api/api-validation-generator.js'
 export { createApiDtoGenerator } from './api/api-dto-generator.js'
@@ -50,17 +44,12 @@ export { createConfigGenerator } from './config/config-generator.js'
 export const createDefaultRegistry = (): GeneratorRegistry =>
   new GeneratorRegistry()
     .register(createTypeScriptGenerator())
-    .register(createTypeScriptSplitGenerator())
     .register(createZodGenerator())
-    .register(createZodSplitGenerator())
     .register(createDataConnectGraphqlGenerator())
-    .register(createDataConnectGraphqlSplitGenerator())
     .register(createDataConnectOperationsGenerator())
-    .register(createDataConnectOperationsSplitGenerator())
     .register(createDataConnectAdapterGenerator())
     .register(createFirestoreTypeGenerator())
     .register(createFirestoreProjectionGenerator())
-    .register(createFirestoreSplitGenerator())
     .register(createApiTypesGenerator())
     .register(createApiValidationGenerator())
     .register(createApiDtoGenerator())

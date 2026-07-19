@@ -453,7 +453,7 @@ models:
     expect(paths).not.toContain('/proj/libs/contracts/src/types.ts')
   })
 
-  it('switches a document-scoped generator to its -split variant via split', () => {
+  it('selects the per-item split layout of a document-scoped generator via split', () => {
     const root = `
 generators:
   - { generator: typescript, out: src, split: true, file: index.ts }
@@ -468,12 +468,12 @@ models:
     })
     expect(result.ok).toBe(true)
     const paths = result.targets.flatMap(t => t.files.map(f => f.path))
-    // per-model file from typescript-split + the barrel renamed via file
+    // per-model file from the typescript split layout + the barrel renamed via file
     expect(paths).toContain('/proj/src/types/products.ts')
     expect(paths).toContain('/proj/src/index.ts')
   })
 
-  it('rejects split for a document-scoped generator without a -split variant', () => {
+  it('rejects split for a document-scoped generator without a split layout', () => {
     const root = `
 generators:
   - { generator: unions, out: src, split: true }

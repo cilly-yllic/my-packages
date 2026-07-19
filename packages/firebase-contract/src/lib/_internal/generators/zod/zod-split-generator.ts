@@ -72,8 +72,8 @@ const renderModel = (model: IrModel, ir: Ir): string => {
  * co-located at their first referencing table, leftovers in
  * `schemas/_shared.ts`, and a `schemas.ts` barrel.
  */
-export const createZodSplitGenerator = (): Generator => ({
-  name: 'zod-split',
+export const createZodSplitLayout = (): Generator => ({
+  name: 'zod',
   description: 'Zod schemas, one file per table (schemas/<table>.ts + schemas.ts barrel)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const groups = splitGroups(ir)

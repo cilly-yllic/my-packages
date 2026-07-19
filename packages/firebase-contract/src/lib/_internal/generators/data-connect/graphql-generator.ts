@@ -4,6 +4,7 @@ import { headerBlocks } from '../support/header.js'
 import { constantCase, pluralize, snakeCase } from '../support/naming.js'
 import { isRelation } from '../support/relations.js'
 import { outputFile } from '../support/templates.js'
+import { withSplitVariant } from '../support/split-variant.js'
 
 // Data Connect built-in scalars. `json` and embedded model objects are stored
 // as `Any` — the logical type is preserved in a comment and restored by the
@@ -147,8 +148,10 @@ const commentBanner = (header: string): string =>
  * model fields become the `Any` scalar while retaining their logical type as a
  * comment, matching the "JSON is Any, logical type preserved" rule.
  */
-export const createDataConnectGraphqlGenerator = (): Generator => ({
-  name: 'data-connect-graphql',
+export const createDataConnectGraphqlGenerator = (): Generator =>
+  withSplitVariant(
+    {
+      name: 'data-connect-graphql',
   description: 'Data Connect GraphQL schema',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const blocks: string[] = [...headerBlocks(context, commentBanner)]
@@ -178,7 +181,9 @@ export const createDataConnectGraphqlGenerator = (): Generator => ({
 
     return [{ path: outputFile(context, 'schema.gql'), content: `${blocks.join('\n\n')}\n` }]
   },
-})
+    },
+    createDataConnectGraphqlSplitLayout()
+  )
 
 const renderEnumGql = (irEnum: IrEnum, rename: Rename): string => {
   const lines: string[] = [...commentLines(irEnum.description, '')]
@@ -197,8 +202,8 @@ const renderEnumGql = (irEnum: IrEnum, rename: Rename): string => {
  * model that references it (leftover enums go to `schema/_enums.gql`). The `Any`
  * scalar is not declared — Data Connect provides it built-in.
  */
-export const createDataConnectGraphqlSplitGenerator = (): Generator => ({
-  name: 'data-connect-graphql-split',
+const createDataConnectGraphqlSplitLayout = (): Generator => ({
+  name: 'data-connect-graphql',
   description: 'Data Connect GraphQL schema, one file per table (schema/<table>.gql)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const banner = headerBlocks(context, commentBanner)

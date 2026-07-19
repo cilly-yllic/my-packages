@@ -1,6 +1,8 @@
 import { IrEnum, IrField, IrTypeRef, Ir, ScalarType } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { withSplitVariant } from '../support/split-variant.js'
+import { createTypeScriptSplitLayout } from './typescript-split-generator.js'
 import { constantCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { outputFile } from '../support/templates.js'
@@ -100,7 +102,8 @@ const renderEnumConst = (irEnum: IrEnum): string => {
  */
 export const createTypeScriptGenerator = (options: TypeScriptGeneratorOptions = {}): Generator => {
   const enumStyle = options.enumStyle ?? 'const'
-  return {
+  return withSplitVariant(
+    {
   name: 'typescript',
   description: 'TypeScript interfaces and enum const/union types',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
@@ -122,5 +125,7 @@ export const createTypeScriptGenerator = (options: TypeScriptGeneratorOptions = 
 
     return [{ path: outputFile(context, 'types.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
-  }
+    },
+    createTypeScriptSplitLayout()
+  )
 }

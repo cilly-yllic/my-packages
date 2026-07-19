@@ -98,8 +98,8 @@ const usesJson = (models: IrModel[]): boolean =>
  * leftovers (and the `Json` type) live in `types/_shared.ts`, and `types.ts`
  * is a barrel re-exporting every file.
  */
-export const createTypeScriptSplitGenerator = (): Generator => ({
-  name: 'typescript-split',
+export const createTypeScriptSplitLayout = (): Generator => ({
+  name: 'typescript',
   description: 'TypeScript interfaces, one file per table (types/<table>.ts + types.ts barrel)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const groups = splitGroups(ir)

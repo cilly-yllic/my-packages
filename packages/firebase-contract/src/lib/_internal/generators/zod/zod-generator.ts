@@ -1,6 +1,8 @@
 import { IrField, IrTypeRef, Ir, ScalarType } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { withSplitVariant } from '../support/split-variant.js'
+import { createZodSplitLayout } from './zod-split-generator.js'
 import { singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { zodConstraints } from '../support/constraints.js'
@@ -56,8 +58,10 @@ const renderFieldSchema = (field: IrField, ir: Ir): string => {
  * Generates Zod schemas and the types inferred from them. Model references use
  * `z.lazy` so the output is order- and cycle-independent.
  */
-export const createZodGenerator = (): Generator => ({
-  name: 'zod',
+export const createZodGenerator = (): Generator =>
+  withSplitVariant(
+    {
+      name: 'zod',
   description: 'Zod validation schemas',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
@@ -80,4 +84,6 @@ export const createZodGenerator = (): Generator => ({
 
     return [{ path: outputFile(context, 'schemas.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
-})
+    },
+    createZodSplitLayout()
+  )

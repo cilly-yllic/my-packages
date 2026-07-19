@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 
 import { Diagnostic, error, hasErrors } from '../diagnostics.js'
 import { buildIr } from '../ir/build-ir.js'
@@ -14,6 +14,12 @@ import { toHeaderComment } from '../generators/support/header.js'
 import { GeneratorOutputSettings } from '../generators/generator.js'
 import { API_PLACEHOLDER_RE, expandApiPlaceholders } from '../generators/support/templates.js'
 import { GeneratorRegistry } from '../generators/registry.js'
+import {
+  expandHeaderPathVars,
+  HeaderPathVars,
+  hasDateTokens,
+  resolveDateTokens,
+} from './header-vars.js'
 
 export interface CompileOptions {
   /** Override module loading (defaults to the file system). */
@@ -53,6 +59,10 @@ export interface GenerateOptions extends CompileOptions {
   /** When true, write the generated files to disk. */
   write?: boolean
   context?: GeneratorContext
+  /** Header `${...}` path values; defaults to entry-only (root = current = entry). */
+  headerVars?: HeaderPathVars
+  /** Clock for `${generatedAt}`/`${updatedAt}` stamping (tests); defaults to now. */
+  now?: Date
 }
 
 export interface GenerateTargetResult {
@@ -287,7 +297,13 @@ const buildGeneratorJobs = (
  */
 export const generateAll = (
   entryPath: string,
-  options: { registry?: GeneratorRegistry; write?: boolean; context?: GeneratorContext; loader?: ModuleLoader } = {}
+  options: {
+    registry?: GeneratorRegistry
+    write?: boolean
+    context?: GeneratorContext
+    loader?: ModuleLoader
+    now?: Date
+  } = {}
 ): GenerateAllResult => {
   const { documents, diagnostics } = compile(entryPath, options)
   if (hasErrors(diagnostics)) {
@@ -299,6 +315,39 @@ export const generateAll = (
   const registry = options.registry ?? createDefaultRegistry()
   // Import order puts dependencies first, so the entry (root) document is last.
   const rootDoc = documents[documents.length - 1]
+  const loader = options.loader ?? createFsLoader()
+  const rootDir = dirname(rootDoc.filePath)
+  const relToRoot = (path: string): string => relative(rootDir, path)
+  /** Shortest import chain root → target (BFS over resolved import edges). */
+  const importChain = (targetDoc: RawContract): string[] => {
+    if (targetDoc.filePath === rootDoc.filePath) return [rootDoc.filePath]
+    const byPath = new Map(documents.map(document => [document.filePath, document]))
+    const queue: string[][] = [[rootDoc.filePath]]
+    const seen = new Set([rootDoc.filePath])
+    while (queue.length > 0) {
+      const chain = queue.shift() as string[]
+      const doc = byPath.get(chain[chain.length - 1] as string)
+      for (const specifier of doc?.imports ?? []) {
+        let importId: string
+        try {
+          importId = loader.resolveId(specifier, doc?.filePath ?? '')
+        } catch {
+          continue
+        }
+        if (importId === targetDoc.filePath) return [...chain, importId]
+        if (!seen.has(importId) && byPath.has(importId)) {
+          seen.add(importId)
+          queue.push([...chain, importId])
+        }
+      }
+    }
+    return [rootDoc.filePath, targetDoc.filePath]
+  }
+  const headerVarsFor = (doc: RawContract): HeaderPathVars => ({
+    rootContractPath: relToRoot(rootDoc.filePath),
+    currentContractPath: relToRoot(doc.filePath),
+    allContractPath: importChain(doc).map(relToRoot).join(' -> '),
+  })
   const mergeDiagnostics = (incoming: Diagnostic[]): void => {
     // Per-target compiles revisit shared imports; keep only new diagnostics.
     for (const diagnostic of incoming) {
@@ -327,6 +376,8 @@ export const generateAll = (
         // Per-generator header beats the CLI/contract-level one ('' disables it).
         ...(header !== undefined ? { header: toHeaderComment(header) } : {}),
       },
+      headerVars: headerVarsFor(doc),
+      ...(options.now ? { now: options.now } : {}),
       ...(options.loader ? { loader: options.loader } : {}),
     })
     mergeDiagnostics(result.diagnostics)
@@ -398,6 +449,15 @@ export const generate = (entryPath: string, options: GenerateOptions): GenerateR
   if (context.header === undefined && ir.header !== undefined) {
     context.header = toHeaderComment(ir.header)
   }
+  if (context.header !== undefined) {
+    const entryName = relative(dirname(entryPath), entryPath)
+    const vars = options.headerVars ?? {
+      rootContractPath: entryName,
+      currentContractPath: entryName,
+      allContractPath: entryName,
+    }
+    context.header = expandHeaderPathVars(context.header, vars)
+  }
   const files: GeneratedFile[] = []
   for (const name of names) {
     const generator = registry.get(name)
@@ -414,12 +474,28 @@ export const generate = (entryPath: string, options: GenerateOptions): GenerateR
     return { ir, diagnostics: collected, files: [], ok: false }
   }
 
+  // `${generatedAt}`/`${updatedAt}` resolve against what is on disk so an
+  // unchanged regenerate reproduces the file byte-for-byte (keeps --check green).
+  const now = options.now ?? new Date()
+  const resolved = files.map(file =>
+    hasDateTokens(file.content)
+      ? {
+          ...file,
+          content: resolveDateTokens(
+            file.content,
+            existsSync(file.path) ? readFileSync(file.path, 'utf8') : undefined,
+            now
+          ),
+        }
+      : file
+  )
+
   if (options.write) {
-    for (const file of files) {
+    for (const file of resolved) {
       mkdirSync(dirname(file.path), { recursive: true })
       writeFileSync(file.path, file.content, 'utf8')
     }
   }
 
-  return { ir, diagnostics: collected, files, ok: true }
+  return { ir, diagnostics: collected, files: resolved, ok: true }
 }

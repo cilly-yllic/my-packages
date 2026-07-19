@@ -360,8 +360,8 @@ apis:                                      # https/callable, keyed by REST path
 Generator application resolves in two tiers — the section `defaults`
 (`apis:/tasks:/events:` → `defaults.generators`) and the entry's own
 `generators:` (which replaces the defaults). `apis:` keys must be REST paths
-(`/...`) with an `operationId`; tasks and Pub/Sub events live in their own
-sections.
+(`/...` or `METHOD /...` so the same route can appear once per verb) with an
+`operationId`; tasks and Pub/Sub events live in their own sections.
 
 For `createCatalog` this yields `CreateCatalogTaskData`, `CreateCatalogTaskPayload =
 RetryTaskPayload<CreateCatalogTaskData>`, and `CREATE_CATALOG_MAX_ATTEMPTS`, plus the
@@ -516,7 +516,7 @@ project:
 | `firestore-split`        | document | `firestore/<collection>.ts` + `firestore.ts` barrel | one file per projection; `_meta_` under `firestore/_/`; DC-schema `.pick()` reuse; `FIRESTORE_DATABASES` constants in the barrel |
 | `api-types`              | api | `api-types.ts`                | endpoint request/response types                        |
 | `api-validation`         | api | `api-validation.ts`           | endpoint request-validation Zod                        |
-| `api-dto`                | api | `api-dtos.ts`                 | class-validator DTO classes                            |
+| `api-dto`                | api | `<operation>.dto.ts` per api  | class-validator DTO classes (NestJS `dto/` convention) |
 | `task-payloads`          | api | `task-payloads.ts`            | envelopes + `*TaskData`/`*TaskPayload` + constants     |
 | `sql-migrations`         | document | `migrations/constraints.sql`  | composite FK / CHECK / index SQL                       |
 | `id-codecs`              | document | `id-codecs.ts` (+ `id-core.ts`) | typed per-entity id encode/decode wrappers; emits the Sqids primitives when `project.idCodec` is set |

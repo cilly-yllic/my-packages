@@ -1,5 +1,5 @@
 import { findModel, Ir, IrApi, IrApiPayload, IrField, ScalarType } from '../../ir/ir.js'
-import { pascalCase, singleQuote } from '../support/naming.js'
+import { kebabCase, pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
@@ -119,16 +119,17 @@ export const createApiDtoGenerator = (): Generator => ({
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     // DTO は HTTP リクエストボディ用 — task / pubsub のペイロードは task-payloads が担う。
     const httpApis = selectApis(ir.apis, context).filter(api => api.kind === 'https' || api.kind === 'callable')
-    if (httpApis.length === 0) {
-      return []
-    }
-    const used = new Set<string>()
-    const dtoBlocks = httpApis.map(api => renderDto(ir, api, used))
-    const blocks: string[] = [...headerBlocks(context)]
-    if (used.size > 0) {
-      blocks.push(`import { ${[...used].sort().join(', ')} } from 'class-validator'`)
-    }
-    blocks.push(...dtoBlocks)
-    return [{ path: 'api-dtos.ts', content: `${blocks.join('\n\n')}\n` }]
+    // One file per api, mirroring the NestJS convention (`dto/create-thing.dto.ts`
+    // next to the controller). The out template decides the directory.
+    return httpApis.map(api => {
+      const used = new Set<string>()
+      const dto = renderDto(ir, api, used)
+      const blocks: string[] = [...headerBlocks(context)]
+      if (used.size > 0) {
+        blocks.push(`import { ${[...used].sort().join(', ')} } from 'class-validator'`)
+      }
+      blocks.push(dto)
+      return { path: `${kebabCase(api.name)}.dto.ts`, content: `${blocks.join('\n\n')}\n` }
+    })
   },
 })

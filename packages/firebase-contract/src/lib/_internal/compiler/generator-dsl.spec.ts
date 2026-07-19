@@ -73,8 +73,10 @@ describe('generator declaration/application DSL', () => {
     const paths = result.targets.flatMap(t => t.files.map(f => f.path))
 
     // updateAiModel opted into api-dto → emitted; createAiProvider did not → absent
-    const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('api-dtos.ts')))
+    const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('.dto.ts')))
     expect(dto?.outDir).toBe('/proj/svc/src/generated')
+    // 1 api = 1 file, named after the operation (NestJS convention)
+    expect(dto?.files.map(f => f.path)).toEqual(['/proj/svc/src/generated/update-ai-model.dto.ts'])
     const dtoContent = dto?.files[0]?.content ?? ''
     expect(dtoContent).toContain('UpdateAiModel')
     expect(dtoContent).not.toContain('CreateAiProvider')
@@ -130,7 +132,7 @@ describe('generator declaration/application DSL', () => {
     })
     expect(result.ok).toBe(true)
     // {path} drops the `{model-id}` param segment
-    const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('api-dtos.ts')))
+    const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('.dto.ts')))
     expect(dto?.outDir).toBe('/proj/svc/src/entries/ai-models')
   })
 })
@@ -301,6 +303,30 @@ describe('parser: sections and declarations', () => {
       { generator: 'api-dto', out: 'src/generated' },
       { generator: 'task-payloads', out: 'src/generated' },
     ])
+  })
+
+  it('allows the same route once per verb via METHOD-prefixed keys', () => {
+    const yml = [
+      'apis:',
+      '  PUT /ai-models/{model-id}:',
+      '    operationId: updateAiModel',
+      '    request: {}',
+      '    response: {}',
+      '  DELETE /ai-models/{model-id}:',
+      '    operationId: deleteAiModel',
+      '    request: {}',
+      '    response: {}',
+      '',
+    ].join('\n')
+    const contract = parseContract(yml, '/c.yml')
+    expect(contract.apis.updateAiModel?.method).toBe('PUT')
+    expect(contract.apis.updateAiModel?.path).toBe('/ai-models/{model-id}')
+    expect(contract.apis.deleteAiModel?.method).toBe('DELETE')
+  })
+
+  it('rejects a method field conflicting with the METHOD-prefixed key', () => {
+    const yml = 'apis:\n  PUT /x:\n    operationId: x\n    method: POST\n'
+    expect(() => parseContract(yml, '/c.yml')).toThrow(/the key says "PUT"/)
   })
 
   it('requires operationId on path-keyed apis', () => {

@@ -3,6 +3,7 @@ import { camelCase, pluralize, snakeCase } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { withSplitVariant } from '../support/split-variant.js'
 
 const SCALAR_GQL: Record<ScalarType, string> = {
   string: 'String',
@@ -507,8 +508,10 @@ const renderTsFile = (ir: Ir, entries: ResolvedOp[], typesImport: string, contex
  * several connectors (`connectors: [app, api]`) and is emitted into each, under
  * `<connector>/operations.gql`. Operations without a connector go to the root.
  */
-export const createDataConnectOperationsGenerator = (): Generator => ({
-  name: 'data-connect-operations',
+export const createDataConnectOperationsGenerator = (): Generator =>
+  withSplitVariant(
+    {
+      name: 'data-connect-operations',
   description: 'Data Connect query/mutation operations (.gql + TS types), routed per connector',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     if (ir.operations.length === 0) {
@@ -529,20 +532,22 @@ export const createDataConnectOperationsGenerator = (): Generator => ({
     }
     return files
   },
-})
+    },
+    createDataConnectOperationsSplitLayout()
+  )
 
 /** Entity directory name for a model: kebab-case of its table name. */
 const entityDir = (model: IrModel): string =>
   (model.table ?? pluralize(snakeCase(model.name))).replace(/_/g, '-')
 
 /**
- * Split variant matching the real connector layout:
+ * Split layout matching the real connector repo structure:
  * `<connector>/operations/<entity>/{queries,mutations}.gql` (+ one
- * `operations-types.ts` per connector). Selectable alongside the single-file
- * `data-connect-operations` generator.
+ * `operations-types.ts` per connector). Selected via `split: true` on the
+ * `data-connect-operations` declaration.
  */
-export const createDataConnectOperationsSplitGenerator = (): Generator => ({
-  name: 'data-connect-operations-split',
+const createDataConnectOperationsSplitLayout = (): Generator => ({
+  name: 'data-connect-operations',
   description: 'Data Connect operations, one file per entity per connector',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     if (ir.operations.length === 0) {

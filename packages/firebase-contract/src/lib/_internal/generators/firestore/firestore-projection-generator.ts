@@ -4,6 +4,8 @@ import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { outputFile } from '../support/templates.js'
+import { withSplitVariant } from '../support/split-variant.js'
+import { createFirestoreSplitLayout } from './firestore-split-generator.js'
 
 // Firestore stores timestamps as dates and represents relations as resolved
 // (hashids-encoded) string ids, regardless of the Data Connect id's type.
@@ -97,8 +99,10 @@ const renderDoc = (ir: Ir, doc: IrFirestoreDoc): string => {
  * add denormalized data (e.g. flattened graph edges) — mirroring a
  * hand-written Firestore schema library.
  */
-export const createFirestoreProjectionGenerator = (): Generator => ({
-  name: 'firestore',
+export const createFirestoreProjectionGenerator = (): Generator =>
+  withSplitVariant(
+    {
+      name: 'firestore',
   description: 'Firestore projection Zod schemas (derived from Data Connect models)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     if (ir.firestore.length === 0) {
@@ -113,4 +117,6 @@ export const createFirestoreProjectionGenerator = (): Generator => ({
     }
     return [{ path: outputFile(context, 'firestore.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
-})
+    },
+    createFirestoreSplitLayout()
+  )

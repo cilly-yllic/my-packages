@@ -240,8 +240,8 @@ const docModuleName = (doc: IrFirestoreDoc): string => camelCase(pluralize(doc.n
  * the `_meta_` envelope under `firestore/_/`, and a `firestore.ts` barrel that
  * also carries the `FIRESTORE_DATABASES` constants.
  */
-export const createFirestoreSplitGenerator = (): Generator => ({
-  name: 'firestore-split',
+export const createFirestoreSplitLayout = (): Generator => ({
+  name: 'firestore',
   description: 'Firestore projection Zod schemas, one file per collection (firestore/<name>.ts + firestore.ts barrel)',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     if (ir.firestore.length === 0) return []

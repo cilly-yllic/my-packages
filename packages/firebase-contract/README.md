@@ -95,7 +95,7 @@ generators:
 
 - **`file`** — output file name. Api scope: a template (`{api-name}`/`{path}`
   allowed when `split: true`). Document scope: renames the single output file,
-  or the barrel for `-split` variants.
+  or the barrel of a split layout.
 - **`split`** — api scope: `true` emits one file per api (the `file` template
   must contain a placeholder), `false` bundles everything into one `file`.
   Document scope: `true` selects the generator's per-item split layout

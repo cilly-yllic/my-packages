@@ -32,7 +32,7 @@ Provides the `firebase-contract` (alias `fbc`) CLI and a programmatic API.
 ```bash
 fbc init          # scaffold contract.yml + firebase-contract.json
 fbc validate      # parse, resolve imports, semantically validate
-fbc generate      # run every `generate:` target declared in the contract graph
+fbc generate      # run every generator declared across the contract graph
 fbc inspect       # print the normalized IR (debugging)
 ```
 
@@ -177,24 +177,24 @@ models:
 
 | option                              | meaning                                                  |
 | ----------------------------------- | -------------------------------------------------------- |
-| `type`                              | scalar name, or an enum/model name                       |
-| `optional`                          | value may be absent (`field?`)                           |
-| `list`                              | value is an array of `type`                              |
-| `id`                                | marks the (single) primary identifier                    |
-| `unique`                            | field-level unique → `@unique`                           |
-| `relation`                          | model-typed field is a foreign-key relation (see below)  |
-| `col`                               | Data Connect column dataType (Int64 PKs default to `bigserial`) |
-| `default`                           | `@default(expr: …)` on the DC column                     |
-| `literal`                           | pin to one literal value (union discriminant tags)       |
-| `nullable`                          | value may be `null` (`.nullable()` / `\| null`)          |
-| `description`                       | doc comment carried into generated output                |
-| `jsdoc`                             | render the description as a JSDoc block (Firestore fields) |
+| `type`                              | document | scalar name, or an enum/model name                       |
+| `optional`                          | document | value may be absent (`field?`)                           |
+| `list`                              | document | value is an array of `type`                              |
+| `id`                                | document | marks the (single) primary identifier                    |
+| `unique`                            | document | field-level unique → `@unique`                           |
+| `relation`                          | document | model-typed field is a foreign-key relation (see below)  |
+| `col`                               | document | Data Connect column dataType (Int64 PKs default to `bigserial`) |
+| `default`                           | document | `@default(expr: …)` on the DC column                     |
+| `literal`                           | document | pin to one literal value (union discriminant tags)       |
+| `nullable`                          | document | value may be `null` (`.nullable()` / `\| null`)          |
+| `description`                       | document | doc comment carried into generated output                |
+| `jsdoc`                             | document | render the description as a JSDoc block (Firestore fields) |
 | **constraints** →                   |                                                          |
-| `min` / `max`                       | numeric bounds                                           |
-| `minLength` / `maxLength`           | string/array length bounds                               |
-| `nonempty`                          | non-empty string/array                                   |
-| `pattern`                           | regex the string must match                              |
-| `email` / `url`                     | string format                                            |
+| `min` / `max`                       | document | numeric bounds                                           |
+| `minLength` / `maxLength`           | document | string/array length bounds                               |
+| `nonempty`                          | document | non-empty string/array                                   |
+| `pattern`                           | document | regex the string must match                              |
+| `email` / `url`                     | document | string format                                            |
 
 Constraints flow into the Zod schemas, the API request validation, and the
 class-validator DTOs.
@@ -203,14 +203,14 @@ class-validator DTOs.
 
 | option       | meaning                                                             |
 | ------------ | ------------------------------------------------------------------ |
-| `key`        | composite primary key field names (else the `id: true` field)      |
-| `table`      | table name override (default: snake_case pluralization)            |
-| `gqlName`    | GraphQL type name override                                          |
-| `fsName`     | Firestore-side rename (avoid collisions with table models)          |
-| `directives` | `multi` = each type-level directive on its own line                 |
-| `footer`     | trailing comment block after the closing `}` in the schema file     |
-| `indexes`    | composite `@index`/`@unique` (`{ fields, name?, unique?, expand? }` — `expand` renders args one per line) |
-| `sql`        | raw SQL constraints (see [SQL migrations](#sql-migrations))         |
+| `key`        | document | composite primary key field names (else the `id: true` field)      |
+| `table`      | document | table name override (default: snake_case pluralization)            |
+| `gqlName`    | document | GraphQL type name override                                          |
+| `fsName`     | document | Firestore-side rename (avoid collisions with table models)          |
+| `directives` | document | `multi` = each type-level directive on its own line                 |
+| `footer`     | document | trailing comment block after the closing `}` in the schema file     |
+| `indexes`    | document | composite `@index`/`@unique` (`{ fields, name?, unique?, expand? }` — `expand` renders args one per line) |
+| `sql`        | document | raw SQL constraints (see [SQL migrations](#sql-migrations))         |
 
 ### Embedded vs relation
 
@@ -288,14 +288,14 @@ Everything below exists to reproduce real hand-written `.gql` files byte-for-byt
 
 | option | meaning |
 | --- | --- |
-| `gqlName` | rendered operation name (the yml key stays unique across services) |
-| `footer` | trailing `# …` comment block after the operation |
-| `raw` | emit the operation body verbatim (multi-model queries, `_or` keyset cursors — field checks are skipped) |
-| `single: id \| key` | single-row lookup (`product(id: $id)` / `product(key: { … })`) |
-| `keyArg` / `keyVars` | update/delete key argument form and variable renames |
-| `whereAnd: true` | render conditions as an `_and: [ … ]` array |
-| `entityDir` | override the `operations/<entity>/` output directory |
-| `style` | formatting hints: `signature`, `args`, `data`, `orderBy`, `auth`, `key`, `and`, `where` (`inline`/`multi`/`compact`/`bare`) |
+| `gqlName` | document | rendered operation name (the yml key stays unique across services) |
+| `footer` | document | trailing `# …` comment block after the operation |
+| `raw` | document | emit the operation body verbatim (multi-model queries, `_or` keyset cursors — field checks are skipped) |
+| `single: id \| document | key` | single-row lookup (`product(id: $id)` / `product(key: { … })`) |
+| `keyArg` / `keyVars` | document | update/delete key argument form and variable renames |
+| `whereAnd: true` | document | render conditions as an `_and: [ … ]` array |
+| `entityDir` | document | override the `operations/<entity>/` output directory |
+| `style` | document | formatting hints: `signature`, `args`, `data`, `orderBy`, `auth`, `key`, `and`, `where` (`inline`/`multi`/`compact`/`bare`) |
 
 Inputs support `var` (variable rename), `required` (override optionality),
 `literal` (fixed value, no variable), `flat` (write the FK column directly),
@@ -311,11 +311,13 @@ name as long as their connector sets don't overlap.
 
 ## API endpoints
 
-Model application endpoints (Cloud Task / callable / https / pubsub). Generates
-request/response types (`api-types`), request-validation Zod (`api-validation`),
-class-validator DTOs (`api-dto`), and — for `task`/`pubsub` — payload contracts
-(`task-payloads`). A payload references a model or declares inline fields; a void
-response maps to `void`.
+Model application endpoints in three kind-implied sections — `apis:` (https /
+callable, keyed by REST path), `tasks:` (Cloud Tasks), and `events:` (Pub/Sub).
+The api-scoped generators — request/response types (`api-types`),
+request-validation Zod (`api-validation`), class-validator DTOs (`api-dto`),
+and payload contracts (`task-payloads`) — run for the entries that opt in via
+the section `defaults` or the entry's own `generators:`. A payload references a
+model or declares inline fields; a void response maps to `void`.
 
 ```yaml
 envelopes:
@@ -475,6 +477,8 @@ project:
   idCodec:
     minLength: 8
     alphabet: <your-shuffled-sqids-alphabet>
+  aliases:
+    "#contracts/*": libs/contracts/src/*
 ```
 
 - `services` (`name`/`database`) feed the `FIRESTORE_DATABASES` constants in the
@@ -483,6 +487,9 @@ project:
   `id-codecs` generator also emits a self-contained `id-core.ts` (the
   encode/decode primitives), so nothing about id encoding lives outside the
   contract.
+- `aliases` maps `#alias/...` out-template prefixes to paths relative to the
+  **root** yml, so imported contracts can target shared libs without relative
+  path gymnastics (longest prefix wins).
 - `codebases` / service `location` + `connectors` are consumed by the optional
   `config` generator (preview), which emits per-service `dataconnect.yaml`,
   per-connector `connector.yaml`, and the `FIRESTORE_DATABASES` /
@@ -494,31 +501,36 @@ project:
 
 # Generators
 
-| name                     | output                        | notes                                                  |
-| ------------------------ | ----------------------------- | ------------------------------------------------------ |
-| `typescript`             | `types.ts`                    | interfaces + const/union enums                         |
-| `typescript-split`       | `types/<table>.ts` + `types.ts` barrel | one file per table; enums/embedded objects co-located |
-| `zod`                    | `schemas.ts`                  | `z.object` schemas (constraints, `z.lazy` model refs)  |
-| `zod-split`              | `schemas/<table>.ts` + `schemas.ts` barrel | split variant of `zod`                    |
-| `data-connect-graphql`   | `schema.gql`                  | `type … @table(name, key)`; `@col`/`@unique`/`@index`/`@default` |
-| `data-connect-graphql-split` | `schema/<table>.gql`     | same schema, one file per table (enums co-located) |
-| `data-connect-operations`| `<connector>/operations.gql` + `.ts` | queries/mutations (where ops, orderBy, limit, aggregate, exprs, inc), per connector |
-| `data-connect-operations-split` | `<connector>/operations/<entity>/{queries,mutations}.gql` | real Data Connect repo layout; shared types stay in `typescript`/`zod` outputs |
-| `data-connect-adapter`   | `data-connect-adapters.ts`    | convert `Any` rows ⇄ logical types                     |
-| `firestore-types`        | `firestore-types.ts`          | naive TS types with Firestore `Timestamp` (all models) |
-| `firestore`              | `firestore.ts`                | Firestore projection Zod schemas (derived, denormalized) |
-| `firestore-split`        | `firestore/<collection>.ts` + `firestore.ts` barrel | one file per projection; `_meta_` under `firestore/_/`; DC-schema `.pick()` reuse; `FIRESTORE_DATABASES` constants in the barrel |
-| `api-types`              | `api-types.ts`                | endpoint request/response types                        |
-| `api-validation`         | `api-validation.ts`           | endpoint request-validation Zod                        |
-| `api-dto`                | `api-dtos.ts`                 | class-validator DTO classes                            |
-| `task-payloads`          | `task-payloads.ts`            | envelopes + `*TaskData`/`*TaskPayload` + constants     |
-| `sql-migrations`         | `migrations/constraints.sql`  | composite FK / CHECK / index SQL                       |
-| `id-codecs`              | `id-codecs.ts` (+ `id-core.ts`) | typed per-entity id encode/decode wrappers; emits the Sqids primitives when `project.idCodec` is set |
-| `unions`                 | `unions.ts`                   | Zod discriminated unions + TS union types              |
-| `config`                 | `dataconnect.yaml`, `connector.yaml`, `constants.ts` | DC configs + sync constants (preview — see [Project config](#project-config)) |
+| name                     | scope    | output                        | notes                                                  |
+| ------------------------ | -------- | ----------------------------- | ------------------------------------------------------ |
+| `typescript`             | document | `types.ts`                    | interfaces + const/union enums                         |
+| `typescript-split`       | document | `types/<table>.ts` + `types.ts` barrel | one file per table; enums/embedded objects co-located |
+| `zod`                    | document | `schemas.ts`                  | `z.object` schemas (constraints, `z.lazy` model refs)  |
+| `zod-split`              | document | `schemas/<table>.ts` + `schemas.ts` barrel | split variant of `zod`                    |
+| `data-connect-graphql`   | document | `schema.gql`                  | `type … @table(name, key)`; `@col`/`@unique`/`@index`/`@default` |
+| `data-connect-graphql-split` | document | `schema/<table>.gql`     | same schema, one file per table (enums co-located) |
+| `data-connect-operations`| document | `<connector>/operations.gql` + `.ts` | queries/mutations (where ops, orderBy, limit, aggregate, exprs, inc), per connector |
+| `data-connect-operations-split` | document | `<connector>/operations/<entity>/{queries,mutations}.gql` | real Data Connect repo layout; shared types stay in `typescript`/`zod` outputs |
+| `data-connect-adapter`   | document | `data-connect-adapters.ts`    | convert `Any` rows ⇄ logical types                     |
+| `firestore-types`        | document | `firestore-types.ts`          | naive TS types with Firestore `Timestamp` (all models) |
+| `firestore`              | document | `firestore.ts`                | Firestore projection Zod schemas (derived, denormalized) |
+| `firestore-split`        | document | `firestore/<collection>.ts` + `firestore.ts` barrel | one file per projection; `_meta_` under `firestore/_/`; DC-schema `.pick()` reuse; `FIRESTORE_DATABASES` constants in the barrel |
+| `api-types`              | api | `api-types.ts`                | endpoint request/response types                        |
+| `api-validation`         | api | `api-validation.ts`           | endpoint request-validation Zod                        |
+| `api-dto`                | api | `api-dtos.ts`                 | class-validator DTO classes                            |
+| `task-payloads`          | api | `task-payloads.ts`            | envelopes + `*TaskData`/`*TaskPayload` + constants     |
+| `sql-migrations`         | document | `migrations/constraints.sql`  | composite FK / CHECK / index SQL                       |
+| `id-codecs`              | document | `id-codecs.ts` (+ `id-core.ts`) | typed per-entity id encode/decode wrappers; emits the Sqids primitives when `project.idCodec` is set |
+| `unions`                 | document | `unions.ts`                   | Zod discriminated unions + TS union types              |
+| `config`                 | document | `dataconnect.yaml`, `connector.yaml`, `constants.ts` | DC configs + sync constants (preview — see [Project config](#project-config)) |
 
 Each generator emits nothing when its section is absent, so a small contract
 produces a small output. Select a subset with `-g`.
+
+**Scope** decides how a `generators:` declaration takes effect: `document`
+generators run once for the yml that declares them; `api` generators run only
+for the entries that apply them (section `defaults.generators` → entry
+`generators:`, entry wins).
 
 ### The `Any` boundary
 

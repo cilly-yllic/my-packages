@@ -184,6 +184,110 @@ models:
     const target = result.targets.find(t => t.source === '/proj/dc/schema.yml')
     expect(target?.outDir).toBe('/proj/libs/contracts/src')
   })
+
+  it('runs operation generators declared in a connectors-style yml', () => {
+    const root = `
+imports:
+  - ./dc/connectors.yml
+`
+    const connectors = `
+generators:
+  - { generator: data-connect-operations, out: src/connectors }
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+      title: string
+operations:
+  SearchProducts:
+    type: query
+    model: Product
+    where:
+      - { field: title, op: contains }
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/dc/connectors.yml': connectors }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/dc/connectors.yml')
+    expect(target?.outDir).toBe('/proj/dc/src/connectors')
+    expect(target?.files.length).toBeGreaterThan(0)
+    expect(target?.files.some(f => f.content.includes('SearchProducts'))).toBe(true)
+  })
+
+  it('runs firestore generators declared in a rules-style yml', () => {
+    const root = `
+imports:
+  - ./rules/contract.yml
+`
+    const rules = `
+generators:
+  - { generator: firestore, out: src/generated }
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+      title: string
+firestore:
+  Product:
+    from: Product
+    collection: shops/{shopId}/products/{productId}
+    omit: [id]
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/rules/contract.yml': rules }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/rules/contract.yml')
+    expect(target?.outDir).toBe('/proj/rules/src/generated')
+    expect(target?.files.some(f => f.content.includes('Product'))).toBe(true)
+  })
+
+  it('runs document-scoped generators declared at the root over the merged graph', () => {
+    const root = `
+generators:
+  - { generator: zod, out: libs/contracts/src }
+imports:
+  - ./shared.yml
+`
+    const shared = `
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+      title: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/shared.yml': shared }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/contract.yml')
+    expect(target?.outDir).toBe('/proj/libs/contracts/src')
+    // the root subtree includes the imported shared models
+    expect(target?.files.some(f => f.content.includes('ProductSchema'))).toBe(true)
+  })
+
+  it('runs model generators declared in a shared-models yml relative to that yml', () => {
+    const root = `
+imports:
+  - ./contracts/shared.yml
+`
+    const shared = `
+generators:
+  - { generator: typescript, out: generated }
+models:
+  SharedEnvelopeMeta:
+    fields:
+      requestId: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/contracts/shared.yml': shared }),
+    })
+    expect(result.ok).toBe(true)
+    const target = result.targets.find(t => t.source === '/proj/contracts/shared.yml')
+    expect(target?.outDir).toBe('/proj/contracts/generated')
+    expect(target?.files.some(f => f.content.includes('SharedEnvelopeMeta'))).toBe(true)
+  })
 })
 
 describe('parser: sections and declarations', () => {

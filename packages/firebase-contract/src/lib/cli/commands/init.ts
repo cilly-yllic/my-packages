@@ -7,6 +7,11 @@ import { CONFIG_FILENAME } from '../config.js'
 
 const EXAMPLE_CONTRACT = `version: 1
 
+# Declare generators once (name + output template); entries opt in below.
+generators:
+  - { generator: typescript, out: generated }
+  - { generator: zod, out: generated }
+
 enums:
   ProductStatus:
     description: Lifecycle state of a product

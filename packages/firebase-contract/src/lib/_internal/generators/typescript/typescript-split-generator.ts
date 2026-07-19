@@ -4,6 +4,7 @@ import { headerBlocks } from '../support/header.js'
 import { constantCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { assignModuleNames, collectDeps, splitGroups } from '../support/split.js'
+import { outputFile } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -168,7 +169,7 @@ export const createTypeScriptSplitGenerator = (): Generator => ({
     }
 
     const exports = files.map(file => `export * from './${file.path.replace(/^types\//, 'types/').replace(/\.ts$/, '')}'`)
-    files.push({ path: 'types.ts', content: `${[...headerBlocks(context), exports.join('\n')].join('\n\n')}\n` })
+    files.push({ path: outputFile(context, 'types.ts'), content: `${[...headerBlocks(context), exports.join('\n')].join('\n\n')}\n` })
     return files
   },
 })

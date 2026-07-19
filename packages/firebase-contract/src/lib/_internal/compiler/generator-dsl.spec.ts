@@ -348,3 +348,165 @@ describe('parser: sections and declarations', () => {
     expect(() => parseContract('apis:\n  createNote:\n    method: POST\n', '/c.yml')).toThrow(/REST paths/)
   })
 })
+
+describe('declarative output settings (file / split / options)', () => {
+  it('splits an api-scoped generator into per-api files via file template', () => {
+    const root = ROOT.replace(
+      `  - generator: api-types
+    out: "#contracts/api-types/{api-name}"`,
+      `  - generator: api-types
+    out: "#contracts/api-types"
+    file: "{api-name}.types.ts"
+    split: true`
+    )
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/svc/contract.yml': SERVICE }),
+    })
+    expect(result.ok).toBe(true)
+    const paths = result.targets.flatMap(t => t.files.map(f => f.path))
+    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-ai-model.types.ts')
+  })
+
+  it('bundles a split-by-default generator when split is false with a plain file name', () => {
+    const overridden = SERVICE.replace(
+      '      - api-dto',
+      '      - { generator: api-dto, split: false, file: dtos.ts }'
+    )
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': ROOT, '/proj/svc/contract.yml': overridden }),
+    })
+    expect(result.ok).toBe(true)
+    const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('dtos.ts')))
+    expect(dto?.files.map(f => f.path)).toEqual(['/proj/svc/src/generated/dtos.ts'])
+    expect(dto?.files[0]?.content).toContain('UpdateAiModelDto')
+  })
+
+  it('honors options.typesImport for the api-types import path', () => {
+    const root = ROOT.replace(
+      `  - generator: api-types
+    out: "#contracts/api-types/{api-name}"`,
+      `  - generator: api-types
+    out: "#contracts/api-types/{api-name}"
+    options:
+      typesImport: "../../types"`
+    )
+    const service = SERVICE.replace(
+      `    request:
+      fields:
+        displayName: string`,
+      `    request:
+      model: AiModel`
+    ) + `
+models:
+  AiModel:
+    fields:
+      displayName: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/svc/contract.yml': service }),
+    })
+    expect(result.ok).toBe(true)
+    const types = result.targets
+      .flatMap(t => t.files)
+      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
+    expect(types?.content).toContain("from '../../types'")
+  })
+
+  it('rejects split without an api placeholder in the file name', () => {
+    const overridden = SERVICE.replace('      - api-types', '      - { generator: api-types, split: true }')
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': ROOT, '/proj/svc/contract.yml': overridden }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.diagnostics.some(d => d.code === 'INVALID_OUT_TEMPLATE')).toBe(true)
+  })
+
+  it('rejects a bundled output whose file name still has api placeholders', () => {
+    const overridden = SERVICE.replace('      - api-dto', '      - { generator: api-dto, split: false }')
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': ROOT, '/proj/svc/contract.yml': overridden }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.diagnostics.some(d => d.code === 'INVALID_OUT_TEMPLATE')).toBe(true)
+  })
+
+  it('renames a document-scoped single-file output via file', () => {
+    const root = `
+generators:
+  - { generator: typescript, out: libs/contracts/src, file: models.ts }
+imports:
+  - ./shared.yml
+`
+    const shared = `
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+      title: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/shared.yml': shared }),
+    })
+    expect(result.ok).toBe(true)
+    const paths = result.targets.flatMap(t => t.files.map(f => f.path))
+    expect(paths).toContain('/proj/libs/contracts/src/models.ts')
+    expect(paths).not.toContain('/proj/libs/contracts/src/types.ts')
+  })
+
+  it('switches a document-scoped generator to its -split variant via split', () => {
+    const root = `
+generators:
+  - { generator: typescript, out: src, split: true, file: index.ts }
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+      title: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root }),
+    })
+    expect(result.ok).toBe(true)
+    const paths = result.targets.flatMap(t => t.files.map(f => f.path))
+    // per-model file from typescript-split + the barrel renamed via file
+    expect(paths).toContain('/proj/src/types/products.ts')
+    expect(paths).toContain('/proj/src/index.ts')
+  })
+
+  it('rejects split for a document-scoped generator without a -split variant', () => {
+    const root = `
+generators:
+  - { generator: unions, out: src, split: true }
+models:
+  Product:
+    fields:
+      id: { type: int, id: true }
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.diagnostics.some(d => d.code === 'UNSUPPORTED_SPLIT')).toBe(true)
+  })
+
+  it('lets an entry-level file/split override the declaration', () => {
+    const root = ROOT.replace(
+      `  - generator: api-types
+    out: "#contracts/api-types/{api-name}"`,
+      `  - generator: api-types
+    out: "#contracts/api-types"
+    file: bundled.ts`
+    )
+    const overridden = SERVICE.replace(
+      '      - api-types',
+      '      - { generator: api-types, split: true, file: "{api-name}.types.ts" }'
+    )
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/svc/contract.yml': overridden }),
+    })
+    expect(result.ok).toBe(true)
+    const paths = result.targets.flatMap(t => t.files.map(f => f.path))
+    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-ai-model.types.ts')
+    expect(paths).not.toContain('/proj/libs/contracts/src/api-types/bundled.ts')
+  })
+})

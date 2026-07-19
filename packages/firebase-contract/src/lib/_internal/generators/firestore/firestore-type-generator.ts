@@ -2,6 +2,7 @@ import { IrField, IrTypeRef, Ir, ScalarType } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
+import { outputFile } from '../support/templates.js'
 
 export interface FirestoreGeneratorOptions {
   /** Module to import `Timestamp` from. Defaults to `firebase/firestore`. */
@@ -99,7 +100,7 @@ export const createFirestoreTypeGenerator = (options: FirestoreGeneratorOptions 
         blocks.push(`${doc}export interface ${model.name} {\n${fields}\n}`)
       }
 
-      return [{ path: 'firestore-types.ts', content: `${blocks.join('\n\n')}\n` }]
+      return [{ path: outputFile(context, 'firestore-types.ts'), content: `${blocks.join('\n\n')}\n` }]
     },
   }
 }

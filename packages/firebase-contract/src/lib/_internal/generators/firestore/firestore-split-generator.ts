@@ -5,6 +5,7 @@ import { headerBlocks } from '../support/header.js'
 import { camelCase, constantCase, pluralize, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { collectDeps, kebabCase, tableNameOf } from '../support/split.js'
+import { outputFile } from '../support/templates.js'
 
 // Projection-level scalars: timestamps become dates, ids/relations become
 // resolved (hashids-encoded) string ids.
@@ -369,7 +370,7 @@ export const createFirestoreSplitGenerator = (): Generator => ({
     const exportLines = ir.firestore.map(doc => `export * from './firestore/${docModuleName(doc)}'`)
     if (ir.firestore.some(doc => doc.meta)) exportLines.push(`export * from './firestore/_'`)
     barrel.push(['// Zod schema / TypeScript 型のエクスポート', ...exportLines].join('\n'))
-    files.push({ path: 'firestore.ts', content: `${barrel.join('\n\n')}\n` })
+    files.push({ path: outputFile(context, 'firestore.ts'), content: `${barrel.join('\n\n')}\n` })
     return files
   },
 })

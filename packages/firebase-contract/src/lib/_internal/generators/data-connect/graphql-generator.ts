@@ -3,6 +3,7 @@ import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { constantCase, pluralize, snakeCase } from '../support/naming.js'
 import { isRelation } from '../support/relations.js'
+import { outputFile } from '../support/templates.js'
 
 // Data Connect built-in scalars. `json` and embedded model objects are stored
 // as `Any` — the logical type is preserved in a comment and restored by the
@@ -175,7 +176,7 @@ export const createDataConnectGraphqlGenerator = (): Generator => ({
       if (model.footer) blocks.push(commentLines(model.footer, '').join('\n'))
     }
 
-    return [{ path: 'schema.gql', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'schema.gql'), content: `${blocks.join('\n\n')}\n` }]
   },
 })
 

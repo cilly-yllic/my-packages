@@ -69,6 +69,46 @@ generators:
   (REST path with `{param}` segments dropped).
 - Entries reference declarations by name — nearest first (same yml → root).
 
+#### Output settings: `file`, `split`, `options`
+
+Every declaration (and any entry-level application) can reshape the output —
+the defaults reproduce each generator's built-in layout, so omitting them
+changes nothing:
+
+```yaml
+generators:
+  - generator: api-dto
+    out: "src/entries/{path}/dto"
+    file: "{api-name}.dto.ts"   # file-name template (default shown)
+    split: true                 # one file per api (api-dto's default)
+  - generator: api-types
+    out: "#contracts/api-types"
+    file: "{api-name}.types.ts" # override the bundled default with per-api files
+    split: true
+    options:
+      typesImport: "../types"   # where `import type { … } from '…'` points
+  - generator: typescript
+    out: "#contracts"
+    file: models.ts             # rename a single-file/barrel output
+    split: true                 # document scope: switches to typescript-split
+```
+
+- **`file`** — output file name. Api scope: a template (`{api-name}`/`{path}`
+  allowed when `split: true`). Document scope: renames the single output file,
+  or the barrel for `-split` variants.
+- **`split`** — api scope: `true` emits one file per api (the `file` template
+  must contain a placeholder), `false` bundles everything into one `file`.
+  Document scope: `true` swaps to the generator's `-split` variant
+  (`typescript` → `typescript-split`, …) and errors when none exists.
+- **`options`** — free-form string map passed through to the generator.
+  Currently: `typesImport` (api-types, task-payloads, data-connect-operations)
+  overrides the `./types` import path.
+- Defaults per generator: `api-types` → `api-types.ts` bundled, `api-validation`
+  → `api-validation.ts` bundled, `task-payloads` → `task-payloads.ts` bundled,
+  `api-dto` → `{api-name}.dto.ts` split.
+- Entry-level settings override the declaration, which overrides the
+  generator's default (same nearest-first rule as `out`).
+
 `fbc generate contract.yml` materializes **all** declared outputs across the
 whole import graph in one run. Passing `-o`/`-g` switches to single-target mode
 (`fbc generate <entry> -o <dir> -g typescript,zod`), and

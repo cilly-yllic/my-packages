@@ -2,6 +2,7 @@ import { Ir, IrProject, IrService } from '../../ir/ir.js'
 import { constantCase, singleQuote } from '../support/naming.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerFor } from '../support/header.js'
+import { outputFile } from '../support/templates.js'
 
 const DEFAULT_LOCATION = 'asia-northeast1'
 
@@ -78,7 +79,7 @@ export const createConfigGenerator = (): Generator => ({
       }
     }
     if (project.services.length > 0 || project.codebases.length > 0) {
-      files.push({ path: 'constants.ts', content: constantsTs(project, headerFor(context)) })
+      files.push({ path: outputFile(context, 'constants.ts'), content: constantsTs(project, headerFor(context)) })
     }
     return files
   },

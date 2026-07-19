@@ -4,6 +4,7 @@ import { headerBlocks } from '../support/header.js'
 import { singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { zodConstraints } from '../support/constraints.js'
+import { outputFile } from '../support/templates.js'
 
 const SCALAR_ZOD: Record<ScalarType, string> = {
   string: 'z.string()',
@@ -77,6 +78,6 @@ export const createZodGenerator = (): Generator => ({
       )
     }
 
-    return [{ path: 'schemas.ts', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'schemas.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
 })

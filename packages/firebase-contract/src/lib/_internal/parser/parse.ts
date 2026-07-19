@@ -360,13 +360,27 @@ const normalizeApiPayload = (raw: unknown, filePath: string, path: string): RawA
   return payload
 }
 
+const normalizeGeneratorOptions = (raw: unknown, filePath: string, path: string): Record<string, string> => {
+  if (!isObject(raw)) {
+    return fail(`"${path}" must be a mapping of string options`, filePath, path)
+  }
+  const options: Record<string, string> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    options[key] = String(value)
+  }
+  return options
+}
+
 const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): RawGeneratorUse => {
   if (typeof raw === 'string') return { generator: raw }
   if (!isObject(raw) || typeof raw.generator !== 'string') {
-    return fail(`"${path}" must be a generator name or { generator, out? }`, filePath, path)
+    return fail(`"${path}" must be a generator name or { generator, out?, file?, split?, options? }`, filePath, path)
   }
   const use: RawGeneratorUse = { generator: raw.generator }
   if (raw.out !== undefined) use.out = String(raw.out)
+  if (raw.file !== undefined) use.file = String(raw.file)
+  if (raw.split !== undefined) use.split = Boolean(raw.split)
+  if (raw.options !== undefined) use.options = normalizeGeneratorOptions(raw.options, filePath, `${path}.options`)
   return use
 }
 
@@ -778,7 +792,13 @@ export const parseContract = (content: string, filePath: string): RawContract =>
       if (typeof entry.out !== 'string') {
         return fail(`generators[${i}] needs a string "out"`, filePath, `generators[${i}].out`)
       }
-      return { generator: entry.generator, out: entry.out }
+      const decl: RawGeneratorDecl = { generator: entry.generator, out: entry.out }
+      if (entry.file !== undefined) decl.file = String(entry.file)
+      if (entry.split !== undefined) decl.split = Boolean(entry.split)
+      if (entry.options !== undefined) {
+        decl.options = normalizeGeneratorOptions(entry.options, filePath, `generators[${i}].options`)
+      }
+      return decl
     })
   }
   if (Object.keys(sectionDefaults).length > 0) {

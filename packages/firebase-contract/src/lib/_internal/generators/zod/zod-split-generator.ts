@@ -5,6 +5,7 @@ import { headerBlocks } from '../support/header.js'
 import { singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { assignModuleNames, collectDeps, splitGroups } from '../support/split.js'
+import { outputFile } from '../support/templates.js'
 
 const SCALAR_ZOD: Record<ScalarType, string> = {
   string: 'z.string()',
@@ -135,7 +136,7 @@ export const createZodSplitGenerator = (): Generator => ({
     }
 
     const exports = files.map(file => `export * from './${file.path.replace(/\.ts$/, '')}'`)
-    files.push({ path: 'schemas.ts', content: `${[...headerBlocks(context), exports.join('\n')].join('\n\n')}\n` })
+    files.push({ path: outputFile(context, 'schemas.ts'), content: `${[...headerBlocks(context), exports.join('\n')].join('\n\n')}\n` })
     return files
   },
 })

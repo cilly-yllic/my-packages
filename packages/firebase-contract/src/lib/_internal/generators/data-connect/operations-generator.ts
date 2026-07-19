@@ -523,7 +523,7 @@ export const createDataConnectOperationsGenerator = (): Generator => ({
     for (const [connector, entries] of groupByConnector(resolvable)) {
       const dir = connector ? `${connector}/` : ''
       // types.ts lives at the output root; connector files sit one level deeper.
-      const typesImport = connector ? '../types' : './types'
+      const typesImport = context?.output?.options?.['typesImport'] ?? (connector ? '../types' : './types')
       files.push({ path: `${dir}operations.gql`, content: renderGqlFile(ir, entries, context) })
       files.push({ path: `${dir}operations-types.ts`, content: renderTsFile(ir, entries, typesImport, context) })
     }

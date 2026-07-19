@@ -3,6 +3,7 @@ import { constantCase, pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -80,26 +81,38 @@ const collectImports = (ir: Ir, tasks: IrApi[]): string[] => {
  * `<Name>TaskData` + `<Name>TaskPayload` and delivery constants (max attempts,
  * timeout, topic) — the shared payload contracts an app otherwise hand-writes.
  */
+const DEFAULT_OUTPUT = { file: 'task-payloads.ts', split: false }
+
 export const createTaskPayloadGenerator = (): Generator => ({
   name: 'task-payloads',
   scope: 'api',
   description: 'Cloud Task/Pub-Sub payload envelopes, data/payload types, and constants',
+  defaultOutput: DEFAULT_OUTPUT,
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    const tasks = selectApis(ir.apis, context).filter(isTask)
-    if (ir.envelopes.length === 0 && tasks.length === 0) {
-      return []
-    }
-    const blocks: string[] = [...headerBlocks(context)]
-    const imports = collectImports(ir, tasks)
-    if (imports.length > 0) {
-      blocks.push(`import type { ${imports.join(', ')} } from './types'`)
-    }
-    for (const env of ir.envelopes) {
-      blocks.push(renderEnvelope(env))
-    }
-    for (const api of tasks) {
-      blocks.push(renderTask(ir, api))
-    }
-    return [{ path: 'task-payloads.ts', content: `${blocks.join('\n\n')}\n` }]
+    const output = resolveOutput(context, DEFAULT_OUTPUT)
+    const typesImport = output.options['typesImport'] ?? './types'
+    return emitApiFiles(selectApis(ir.apis, context), output, subset => {
+      const tasks = subset.filter(isTask)
+      // Bundled mode keeps the envelope-only output; split mode inlines only
+      // the envelopes each per-task file actually references.
+      const envelopes = output.split
+        ? ir.envelopes.filter(env => tasks.some(api => api.task?.envelope === env.name))
+        : ir.envelopes
+      if (envelopes.length === 0 && tasks.length === 0) {
+        return undefined
+      }
+      const blocks: string[] = [...headerBlocks(context)]
+      const imports = collectImports(ir, tasks)
+      if (imports.length > 0) {
+        blocks.push(`import type { ${imports.join(', ')} } from '${typesImport}'`)
+      }
+      for (const env of envelopes) {
+        blocks.push(renderEnvelope(env))
+      }
+      for (const api of tasks) {
+        blocks.push(renderTask(ir, api))
+      }
+      return `${blocks.join('\n\n')}\n`
+    })
   },
 })

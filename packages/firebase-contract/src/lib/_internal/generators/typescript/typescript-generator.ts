@@ -3,6 +3,7 @@ import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { constantCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
+import { outputFile } from '../support/templates.js'
 
 export interface TypeScriptGeneratorOptions {
   /**
@@ -119,7 +120,7 @@ export const createTypeScriptGenerator = (options: TypeScriptGeneratorOptions = 
       blocks.push(`${doc}export interface ${model.name} {\n${fields}\n}`)
     }
 
-    return [{ path: 'types.ts', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'types.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
   }
 }

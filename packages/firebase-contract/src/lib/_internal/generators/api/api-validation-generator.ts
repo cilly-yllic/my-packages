@@ -2,7 +2,7 @@ import { findModel, Ir, IrApi, IrApiPayload, IrField, ScalarType } from '../../i
 import { pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { zodConstraints } from '../support/constraints.js'
-import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
+import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 
 const SCALAR_ZOD: Record<ScalarType, string> = {
@@ -80,12 +80,14 @@ const renderRequestSchema = (ir: Ir, api: IrApi): string => {
 export const createApiValidationGenerator = (): Generator => ({
   name: 'api-validation',
   description: 'API request-validation Zod schemas',
+  scope: 'api',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    if (ir.apis.length === 0) {
+    const apis = selectApis(ir.apis, context)
+    if (apis.length === 0) {
       return []
     }
     const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
-    for (const api of ir.apis) {
+    for (const api of apis) {
       blocks.push(renderRequestSchema(ir, api))
     }
     return [{ path: 'api-validation.ts', content: `${blocks.join('\n\n')}\n` }]

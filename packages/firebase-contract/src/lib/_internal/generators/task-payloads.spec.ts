@@ -13,17 +13,16 @@ envelopes:
       identifierId: string
       opId: string
       enqueuedAt: int
-apis:
+tasks:
   createCatalog:
-    kind: task
     envelope: RetryTaskPayload
     maxAttempts: 3
     request:
       fields:
         uid: string
         catalogId: string
+events:
   generateAiResponse:
-    kind: pubsub
     topic: ai-review-generate-response
     timeoutSeconds: 540
     request:

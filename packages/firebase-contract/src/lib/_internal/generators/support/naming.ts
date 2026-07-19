@@ -28,6 +28,11 @@ export const snakeCase = (value: string): string =>
     .map(word => word.toLowerCase())
     .join('_')
 
+export const kebabCase = (value: string): string =>
+  words(value)
+    .map(word => word.toLowerCase())
+    .join('-')
+
 /** Naive English pluralization sufficient for table naming. */
 export const pluralize = (value: string): string => {
   if (/[^aeiou]y$/.test(value)) return `${value.slice(0, -1)}ies`

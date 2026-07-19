@@ -24,8 +24,8 @@ models:
       email: { type: string, email: true }
       tags: { type: string, list: true, minLength: 1, maxLength: 10 }
 apis:
-  createNote:
-    kind: https
+  /notes:
+    operationId: createNote
     method: POST
     request:
       fields:

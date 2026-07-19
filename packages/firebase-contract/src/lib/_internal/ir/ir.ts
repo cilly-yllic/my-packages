@@ -301,6 +301,8 @@ export interface IrApi {
   kind: ApiKind
   /** HTTP method for `https` endpoints. */
   method?: string
+  /** REST path when declared via the path-keyed `apis:` section. */
+  path?: string
   request: IrApiPayload
   response: IrApiPayload
   /** Delivery config for `task`/`pubsub` kinds. */

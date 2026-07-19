@@ -48,16 +48,17 @@ operations:
     authReason: gated by app auth
     where: [shop]
     select: [id, title, status]
-apis:
+tasks:
   createProduct:
-    kind: task
     request:
       fields:
         shopId: string
         title: string
     response:
       void: true
-  getProduct:
+apis:
+  /products/{product-id}:
+    operationId: getProduct
     kind: callable
     request:
       fields:

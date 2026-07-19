@@ -1,7 +1,7 @@
 import { Ir, IrApi, IrApiPayload, IrField, ScalarType } from '../../ir/ir.js'
 import { pascalCase } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
-import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
+import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -52,7 +52,7 @@ const renderPayloadType = (ir: Ir, payload: IrApiPayload, typeName: string): str
   return `export interface ${typeName} {\n${fields}\n}`
 }
 
-const collectImports = (ir: Ir): string[] => {
+const collectImports = (ir: Ir, apis: IrApi[]): string[] => {
   const names = new Set<string>()
   const add = (payload: IrApiPayload): void => {
     if (payload.model) names.add(payload.model)
@@ -65,7 +65,7 @@ const collectImports = (ir: Ir): string[] => {
       }
     }
   }
-  for (const api of ir.apis) {
+  for (const api of apis) {
     add(api.request)
     add(api.response)
   }
@@ -87,16 +87,18 @@ const apiComment = (api: IrApi): string => {
 export const createApiTypesGenerator = (): Generator => ({
   name: 'api-types',
   description: 'API request/response TypeScript types',
+  scope: 'api',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    if (ir.apis.length === 0) {
+    const apis = selectApis(ir.apis, context)
+    if (apis.length === 0) {
       return []
     }
     const blocks: string[] = [...headerBlocks(context)]
-    const imports = collectImports(ir)
+    const imports = collectImports(ir, apis)
     if (imports.length > 0) {
       blocks.push(`import type { ${imports.join(', ')} } from './types'`)
     }
-    for (const api of ir.apis) {
+    for (const api of apis) {
       const pascal = pascalCase(api.name)
       blocks.push(
         [

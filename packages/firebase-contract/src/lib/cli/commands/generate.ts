@@ -50,7 +50,7 @@ export const registerGenerate = (program: Command): void => {
       const registry = createDefaultRegistry()
       const context = header !== undefined ? { header } : undefined
 
-      // Without -o/-g, run every `generate:` target declared in the contract
+      // Without -o/-g, run every generator declared in the contract
       // graph — the one-command flow. Flags switch back to single-target mode.
       const explicit = flags.outDir !== undefined || flags.generators !== undefined || config.outDir !== undefined || config.generators !== undefined
       if (!explicit) {

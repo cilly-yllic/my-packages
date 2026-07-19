@@ -169,6 +169,7 @@ const buildApi = (
     sourceFile,
   }
   if (raw.method !== undefined) api.method = raw.method
+  if (raw.path !== undefined) api.path = raw.path
   if (raw.description !== undefined) api.description = raw.description
   if (
     raw.envelope !== undefined ||

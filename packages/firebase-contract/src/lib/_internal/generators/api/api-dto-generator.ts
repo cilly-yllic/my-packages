@@ -1,7 +1,7 @@
 import { findModel, Ir, IrApi, IrApiPayload, IrField, ScalarType } from '../../ir/ir.js'
 import { pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
-import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
+import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
@@ -114,10 +114,11 @@ const renderDto = (ir: Ir, api: IrApi, used: Set<string>): string => {
  */
 export const createApiDtoGenerator = (): Generator => ({
   name: 'api-dto',
+  scope: 'api',
   description: 'class-validator DTO classes for API requests',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     // DTO は HTTP リクエストボディ用 — task / pubsub のペイロードは task-payloads が担う。
-    const httpApis = ir.apis.filter(api => api.kind === 'https' || api.kind === 'callable')
+    const httpApis = selectApis(ir.apis, context).filter(api => api.kind === 'https' || api.kind === 'callable')
     if (httpApis.length === 0) {
       return []
     }

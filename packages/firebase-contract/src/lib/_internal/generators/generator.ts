@@ -9,6 +9,12 @@ export interface GeneratedFile {
 export interface GeneratorContext {
   /** Optional banner prepended to each generated file. */
   header?: string
+  /**
+   * Api-scoped generation: restrict output to these api names. `undefined`
+   * keeps the legacy behavior (all apis in the IR). Set by the compiler when
+   * entries opt into a generator via section defaults / entry `generators:`.
+   */
+  apiNames?: string[]
 }
 
 /**
@@ -21,5 +27,18 @@ export interface Generator {
   /** Unique key used to select the generator from the CLI/registry. */
   readonly name: string
   readonly description?: string
+  /**
+   * `api`: output follows per-entry applications (section defaults → entry).
+   * `document` (default): declaring the generator in a yml's `generators:`
+   * block runs it once for that yml.
+   */
+  readonly scope?: 'api' | 'document'
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[]
+}
+
+/** Narrow `ir.apis` to the compiler-selected subset (no-op without a filter). */
+export const selectApis = <T extends { name: string }>(apis: T[], context?: GeneratorContext): T[] => {
+  if (!context?.apiNames) return apis
+  const allowed = new Set(context.apiNames)
+  return apis.filter(api => allowed.has(api.name))
 }

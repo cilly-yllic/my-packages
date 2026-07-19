@@ -69,7 +69,7 @@ generators:
   (REST path with `{param}` segments dropped).
 - Entries reference declarations by name — nearest first (same yml → root).
 
-#### Output settings: `file`, `split`, `options`
+#### Output settings: `file`, `split`, `options`, `header`
 
 Every declaration (and any entry-level application) can reshape the output —
 the defaults reproduce each generator's built-in layout, so omitting them
@@ -103,6 +103,10 @@ generators:
 - **`options`** — free-form string map passed through to the generator.
   Currently: `typesImport` (api-types, task-payloads, data-connect-operations)
   overrides the `./types` import path.
+- **`header`** — per-generator banner override: `default` for the built-in
+  AUTO-GENERATED banner, any text for a custom comment, `""` to suppress the
+  banner for this generator. Wins over the contract-level `header:` and the
+  CLI `--header` flag.
 - Defaults per generator: `api-types` → `api-types.ts` bundled, `api-validation`
   → `api-validation.ts` bundled, `task-payloads` → `task-payloads.ts` bundled,
   `api-dto` → `{api-name}.dto.ts` split.

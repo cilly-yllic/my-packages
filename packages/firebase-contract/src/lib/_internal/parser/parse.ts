@@ -374,13 +374,14 @@ const normalizeGeneratorOptions = (raw: unknown, filePath: string, path: string)
 const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): RawGeneratorUse => {
   if (typeof raw === 'string') return { generator: raw }
   if (!isObject(raw) || typeof raw.generator !== 'string') {
-    return fail(`"${path}" must be a generator name or { generator, out?, file?, split?, options? }`, filePath, path)
+    return fail(`"${path}" must be a generator name or { generator, out?, file?, split?, options?, header? }`, filePath, path)
   }
   const use: RawGeneratorUse = { generator: raw.generator }
   if (raw.out !== undefined) use.out = String(raw.out)
   if (raw.file !== undefined) use.file = String(raw.file)
   if (raw.split !== undefined) use.split = Boolean(raw.split)
   if (raw.options !== undefined) use.options = normalizeGeneratorOptions(raw.options, filePath, `${path}.options`)
+  if (raw.header !== undefined) use.header = String(raw.header)
   return use
 }
 
@@ -798,6 +799,7 @@ export const parseContract = (content: string, filePath: string): RawContract =>
       if (entry.options !== undefined) {
         decl.options = normalizeGeneratorOptions(entry.options, filePath, `generators[${i}].options`)
       }
+      if (entry.header !== undefined) decl.header = String(entry.header)
       return decl
     })
   }

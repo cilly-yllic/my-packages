@@ -76,6 +76,8 @@ interface GeneratorJob {
   outDir: string
   apiNames?: string[]
   output?: GeneratorOutputSettings
+  /** Raw per-generator header override (nearest-first: use → declaration). */
+  header?: string
 }
 
 /** `apis:/tasks:/events:` section a raw api belongs to (drives the section defaults lookup). */
@@ -180,6 +182,7 @@ const buildGeneratorJobs = (
       const file = use.file ?? decl?.file
       const split = use.split ?? decl?.split ?? generator?.defaultOutput?.split
       const options = use.options ?? decl?.options
+      const header = use.header ?? decl?.header
       if (file !== undefined) output.file = file
       if (split !== undefined) output.split = split
       if (options !== undefined) output.options = options
@@ -208,12 +211,13 @@ const buildGeneratorJobs = (
       if (expanded === undefined) continue
       const outDir = resolveOutDir(expanded, doc, rootDoc, diagnostics)
       if (outDir === undefined) continue
-      const key = [use.generator, outDir, file ?? '', String(split ?? ''), JSON.stringify(options ?? null)].join('\u0000')
+      const key = [use.generator, outDir, file ?? '', String(split ?? ''), JSON.stringify(options ?? null), header ?? '\u0001'].join('\u0000')
       const existing = grouped.get(key)
       if (existing) {
         existing.apiNames?.push(apiName)
       } else {
         const job: GeneratorJob = { source: doc.filePath, generatorName: use.generator, outDir, apiNames: [apiName], output }
+        if (header !== undefined) job.header = header
         grouped.set(key, job)
         jobs.push(job)
       }
@@ -267,6 +271,7 @@ const buildGeneratorJobs = (
       generatorName,
       outDir,
       ...(Object.keys(output).length > 0 ? { output } : {}),
+      ...(decl.header !== undefined ? { header: decl.header } : {}),
     })
   }
 
@@ -307,14 +312,21 @@ export const generateAll = (
     outDir: string,
     generators: string[],
     apiNames?: string[],
-    output?: GeneratorOutputSettings
+    output?: GeneratorOutputSettings,
+    header?: string
   ): void => {
     const result = generate(doc.filePath, {
       outDir,
       generators,
       registry,
       write: options.write,
-      context: { ...options.context, ...(apiNames ? { apiNames } : {}), ...(output ? { output } : {}) },
+      context: {
+        ...options.context,
+        ...(apiNames ? { apiNames } : {}),
+        ...(output ? { output } : {}),
+        // Per-generator header beats the CLI/contract-level one ('' disables it).
+        ...(header !== undefined ? { header: toHeaderComment(header) } : {}),
+      },
       ...(options.loader ? { loader: options.loader } : {}),
     })
     mergeDiagnostics(result.diagnostics)
@@ -325,7 +337,7 @@ export const generateAll = (
     // Declaration/application DSL (`generators:` + section defaults / entry `generators:`).
     const jobDiagnostics: Diagnostic[] = []
     for (const job of buildGeneratorJobs(doc, rootDoc, registry, jobDiagnostics)) {
-      runTarget(doc, job.outDir, [job.generatorName], job.apiNames, job.output)
+      runTarget(doc, job.outDir, [job.generatorName], job.apiNames, job.output, job.header)
     }
     mergeDiagnostics(jobDiagnostics)
     if (hasErrors(jobDiagnostics)) ok = false

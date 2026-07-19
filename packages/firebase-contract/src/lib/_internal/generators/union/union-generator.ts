@@ -2,6 +2,7 @@ import { Ir, IrUnion } from '../../ir/ir.js'
 import { singleQuote } from '../support/naming.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { outputFile } from '../support/templates.js'
 
 const schemaName = (name: string): string => `${name}Schema`
 
@@ -37,6 +38,6 @@ export const createUnionGenerator = (): Generator => ({
     for (const union of ir.unions) {
       blocks.push(renderUnion(union))
     }
-    return [{ path: 'unions.ts', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'unions.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
 })

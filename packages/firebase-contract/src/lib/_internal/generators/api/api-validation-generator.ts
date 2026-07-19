@@ -4,6 +4,7 @@ import { isRelation, relationFkName, relationFkType } from '../support/relations
 import { zodConstraints } from '../support/constraints.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_ZOD: Record<ScalarType, string> = {
   string: 'z.string()',
@@ -77,19 +78,25 @@ const renderRequestSchema = (ir: Ir, api: IrApi): string => {
  * Generates Zod schemas that validate each endpoint's *request*. Model-backed
  * requests are expanded to the model's fields so the schema is self-contained.
  */
+const DEFAULT_OUTPUT = { file: 'api-validation.ts', split: false }
+
 export const createApiValidationGenerator = (): Generator => ({
   name: 'api-validation',
   description: 'API request-validation Zod schemas',
   scope: 'api',
+  defaultOutput: DEFAULT_OUTPUT,
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const apis = selectApis(ir.apis, context)
     if (apis.length === 0) {
       return []
     }
-    const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
-    for (const api of apis) {
-      blocks.push(renderRequestSchema(ir, api))
-    }
-    return [{ path: 'api-validation.ts', content: `${blocks.join('\n\n')}\n` }]
+    const output = resolveOutput(context, DEFAULT_OUTPUT)
+    return emitApiFiles(apis, output, subset => {
+      const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
+      for (const api of subset) {
+        blocks.push(renderRequestSchema(ir, api))
+      }
+      return `${blocks.join('\n\n')}\n`
+    })
   },
 })

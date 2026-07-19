@@ -15,6 +15,22 @@ export interface GeneratorContext {
    * entries opt into a generator via section defaults / entry `generators:`.
    */
   apiNames?: string[]
+  /**
+   * Resolved output settings (declaration → entry override → generator
+   * default). Generators fall back to their own `defaultOutput` when absent
+   * (e.g. direct programmatic `generate()` calls).
+   */
+  output?: GeneratorOutputSettings
+}
+
+/** How an api-scoped generator materializes files — all declarable in YAML. */
+export interface GeneratorOutputSettings {
+  /** File name template; `{api-name}` / `{path}` allowed when `split` is true. */
+  file?: string
+  /** true: one file per api. false: one bundled file per job. */
+  split?: boolean
+  /** Free-form generator-specific tweaks (e.g. api-types `typesImport`). */
+  options?: Record<string, string>
 }
 
 /**
@@ -33,6 +49,8 @@ export interface Generator {
    * block runs it once for that yml.
    */
   readonly scope?: 'api' | 'document'
+  /** Built-in output defaults (api-scoped generators); overridable per declaration. */
+  readonly defaultOutput?: { file: string; split: boolean }
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[]
 }
 

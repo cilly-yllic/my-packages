@@ -2,6 +2,7 @@ import { Ir, IrField, IrModel } from '../../ir/ir.js'
 import { pascalCase } from '../support/naming.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { outputFile } from '../support/templates.js'
 
 export interface IdCodecGeneratorOptions {
   /**
@@ -144,7 +145,7 @@ export const createIdCodecGenerator = (options: IdCodecGeneratorOptions = {}): G
       for (const { model, field } of entries) {
         blocks.push(renderCodec(model, field))
       }
-      const files: GeneratedFile[] = [{ path: 'id-codecs.ts', content: `${blocks.join('\n\n')}\n` }]
+      const files: GeneratedFile[] = [{ path: outputFile(context, 'id-codecs.ts'), content: `${blocks.join('\n\n')}\n` }]
       // Emit the primitives too when the contract pins the Sqids settings.
       if (ir.project?.idCodec && core === './id-core') {
         files.push({ path: 'id-core.ts', content: idCoreFile(ir.project.idCodec) })

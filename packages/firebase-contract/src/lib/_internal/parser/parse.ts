@@ -360,13 +360,28 @@ const normalizeApiPayload = (raw: unknown, filePath: string, path: string): RawA
   return payload
 }
 
+const normalizeGeneratorOptions = (raw: unknown, filePath: string, path: string): Record<string, string> => {
+  if (!isObject(raw)) {
+    return fail(`"${path}" must be a mapping of string options`, filePath, path)
+  }
+  const options: Record<string, string> = {}
+  for (const [key, value] of Object.entries(raw)) {
+    options[key] = String(value)
+  }
+  return options
+}
+
 const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): RawGeneratorUse => {
   if (typeof raw === 'string') return { generator: raw }
   if (!isObject(raw) || typeof raw.generator !== 'string') {
-    return fail(`"${path}" must be a generator name or { generator, out? }`, filePath, path)
+    return fail(`"${path}" must be a generator name or { generator, out?, file?, split?, options?, header? }`, filePath, path)
   }
   const use: RawGeneratorUse = { generator: raw.generator }
   if (raw.out !== undefined) use.out = String(raw.out)
+  if (raw.file !== undefined) use.file = String(raw.file)
+  if (raw.split !== undefined) use.split = Boolean(raw.split)
+  if (raw.options !== undefined) use.options = normalizeGeneratorOptions(raw.options, filePath, `${path}.options`)
+  if (raw.header !== undefined) use.header = String(raw.header)
   return use
 }
 
@@ -388,9 +403,17 @@ const normalizeSectionDefaults = (raw: unknown, filePath: string, section: strin
   return normalizeGeneratorUses(raw.generators, filePath, `${section}.${SECTION_DEFAULTS_KEY}.generators`)
 }
 
+/** `METHOD /path` keys let the same route appear once per verb (`PUT /x` + `DELETE /x`). */
+const METHOD_PREFIXED_KEY_RE = /^([A-Z]+) (\/.*)$/
+
+/** True when an `apis:` key is a route form this parser accepts (`/path` or `METHOD /path`). */
+const isPathApiKey = (key: string): boolean => key.startsWith('/') || METHOD_PREFIXED_KEY_RE.test(key)
+
 /**
- * Path-keyed api entry (`apis:` section, key starts with `/`): kind defaults to
- * `https` (or `callable` when declared), `operationId` names the generated types.
+ * Path-keyed api entry (`apis:` section, key `/path` or `METHOD /path`): kind
+ * defaults to `https` (or `callable` when declared), `operationId` names the
+ * generated types. A method prefix in the key wins over a `method:` field —
+ * declaring both with different values is an error.
  */
 const normalizePathApi = (raw: unknown, filePath: string, pathKey: string): { name: string; api: RawApi } => {
   if (!isObject(raw)) {
@@ -403,8 +426,18 @@ const normalizePathApi = (raw: unknown, filePath: string, pathKey: string): { na
   if (kind !== 'https' && kind !== 'callable') {
     return fail(`Api "${pathKey}" kind must be https|callable (tasks/events have their own sections)`, filePath, `apis.${pathKey}.kind`)
   }
-  const api: RawApi = { kind, path: pathKey }
-  if (raw.method !== undefined) api.method = String(raw.method)
+  const prefixed = METHOD_PREFIXED_KEY_RE.exec(pathKey)
+  const keyMethod = prefixed?.[1]
+  const routePath = prefixed?.[2] ?? pathKey
+  const api: RawApi = { kind, path: routePath }
+  if (keyMethod !== undefined) {
+    if (raw.method !== undefined && String(raw.method) !== keyMethod) {
+      return fail(`Api "${pathKey}" declares method "${String(raw.method)}" but the key says "${keyMethod}"`, filePath, `apis.${pathKey}.method`)
+    }
+    api.method = keyMethod
+  } else if (raw.method !== undefined) {
+    api.method = String(raw.method)
+  }
   if (raw.description !== undefined) api.description = String(raw.description)
   api.request = normalizeApiPayload(raw.request, filePath, `apis.${pathKey}.request`)
   api.response = normalizeApiPayload(raw.response, filePath, `apis.${pathKey}.response`)
@@ -664,12 +697,12 @@ export const parseContract = (content: string, filePath: string): RawContract =>
     for (const [key, raw] of Object.entries(doc.apis)) {
       if (key === SECTION_DEFAULTS_KEY) {
         sectionDefaults.apis = normalizeSectionDefaults(raw, filePath, 'apis')
-      } else if (key.startsWith('/')) {
-        // Path-keyed REST form: the key is the route, `operationId` names the api.
+      } else if (isPathApiKey(key)) {
+        // Path-keyed REST form (`/path` or `METHOD /path`); `operationId` names the api.
         const { name, api } = normalizePathApi(raw, filePath, key)
         addApi(name, api, 'apis')
       } else {
-        fail(`"apis" keys must be REST paths starting with "/" (tasks/events have their own sections): "${key}"`, filePath, `apis.${key}`)
+        fail(`"apis" keys must be REST paths ("/path" or "METHOD /path"; tasks/events have their own sections): "${key}"`, filePath, `apis.${key}`)
       }
     }
   }
@@ -760,7 +793,14 @@ export const parseContract = (content: string, filePath: string): RawContract =>
       if (typeof entry.out !== 'string') {
         return fail(`generators[${i}] needs a string "out"`, filePath, `generators[${i}].out`)
       }
-      return { generator: entry.generator, out: entry.out }
+      const decl: RawGeneratorDecl = { generator: entry.generator, out: entry.out }
+      if (entry.file !== undefined) decl.file = String(entry.file)
+      if (entry.split !== undefined) decl.split = Boolean(entry.split)
+      if (entry.options !== undefined) {
+        decl.options = normalizeGeneratorOptions(entry.options, filePath, `generators[${i}].options`)
+      }
+      if (entry.header !== undefined) decl.header = String(entry.header)
+      return decl
     })
   }
   if (Object.keys(sectionDefaults).length > 0) {

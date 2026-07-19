@@ -3,6 +3,7 @@ import { singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { outputFile } from '../support/templates.js'
 
 // Firestore stores timestamps as dates and represents relations as resolved
 // (hashids-encoded) string ids, regardless of the Data Connect id's type.
@@ -110,6 +111,6 @@ export const createFirestoreProjectionGenerator = (): Generator => ({
     for (const doc of ir.firestore) {
       blocks.push(renderDoc(ir, doc))
     }
-    return [{ path: 'firestore.ts', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'firestore.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
 })

@@ -3,6 +3,7 @@ import { pascalCase } from '../support/naming.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -84,30 +85,37 @@ const apiComment = (api: IrApi): string => {
  * can reference an existing model or declare inline fields; a void response maps
  * to `void`. This mirrors the shared producer/consumer contract pattern.
  */
+const DEFAULT_OUTPUT = { file: 'api-types.ts', split: false }
+
 export const createApiTypesGenerator = (): Generator => ({
   name: 'api-types',
   description: 'API request/response TypeScript types',
   scope: 'api',
+  defaultOutput: DEFAULT_OUTPUT,
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const apis = selectApis(ir.apis, context)
     if (apis.length === 0) {
       return []
     }
-    const blocks: string[] = [...headerBlocks(context)]
-    const imports = collectImports(ir, apis)
-    if (imports.length > 0) {
-      blocks.push(`import type { ${imports.join(', ')} } from './types'`)
-    }
-    for (const api of apis) {
-      const pascal = pascalCase(api.name)
-      blocks.push(
-        [
-          apiComment(api),
-          renderPayloadType(ir, api.request, `${pascal}Request`),
-          renderPayloadType(ir, api.response, `${pascal}Response`),
-        ].join('\n')
-      )
-    }
-    return [{ path: 'api-types.ts', content: `${blocks.join('\n\n')}\n` }]
+    const output = resolveOutput(context, DEFAULT_OUTPUT)
+    const typesImport = output.options['typesImport'] ?? './types'
+    return emitApiFiles(apis, output, subset => {
+      const blocks: string[] = [...headerBlocks(context)]
+      const imports = collectImports(ir, subset)
+      if (imports.length > 0) {
+        blocks.push(`import type { ${imports.join(', ')} } from '${typesImport}'`)
+      }
+      for (const api of subset) {
+        const pascal = pascalCase(api.name)
+        blocks.push(
+          [
+            apiComment(api),
+            renderPayloadType(ir, api.request, `${pascal}Request`),
+            renderPayloadType(ir, api.response, `${pascal}Response`),
+          ].join('\n')
+        )
+      }
+      return `${blocks.join('\n\n')}\n`
+    })
   },
 })

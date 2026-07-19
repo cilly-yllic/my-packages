@@ -3,6 +3,7 @@ import { pascalCase, singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext, selectApis } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { emitApiFiles, resolveOutput } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -112,23 +113,31 @@ const renderDto = (ir: Ir, api: IrApi, used: Set<string>): string => {
  * hand-written NestJS DTOs (decorators derived from field type +
  * constraints). Complements the Zod request schemas for a NestJS ValidationPipe.
  */
+// Default mirrors the NestJS convention: one `dto/create-thing.dto.ts` per
+// endpoint next to its controller (the out template decides the directory).
+const DEFAULT_OUTPUT = { file: '{api-name}.dto.ts', split: true }
+
 export const createApiDtoGenerator = (): Generator => ({
   name: 'api-dto',
   scope: 'api',
   description: 'class-validator DTO classes for API requests',
+  defaultOutput: DEFAULT_OUTPUT,
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
-    // DTO は HTTP リクエストボディ用 — task / pubsub のペイロードは task-payloads が担う。
+    // DTOs cover HTTP request bodies — task / pubsub payloads belong to task-payloads.
     const httpApis = selectApis(ir.apis, context).filter(api => api.kind === 'https' || api.kind === 'callable')
-    if (httpApis.length === 0) {
-      return []
-    }
-    const used = new Set<string>()
-    const dtoBlocks = httpApis.map(api => renderDto(ir, api, used))
-    const blocks: string[] = [...headerBlocks(context)]
-    if (used.size > 0) {
-      blocks.push(`import { ${[...used].sort().join(', ')} } from 'class-validator'`)
-    }
-    blocks.push(...dtoBlocks)
-    return [{ path: 'api-dtos.ts', content: `${blocks.join('\n\n')}\n` }]
+    const output = resolveOutput(context, DEFAULT_OUTPUT)
+    return emitApiFiles(httpApis, output, subset => {
+      if (subset.length === 0) {
+        return undefined
+      }
+      const used = new Set<string>()
+      const dtos = subset.map(api => renderDto(ir, api, used))
+      const blocks: string[] = [...headerBlocks(context)]
+      if (used.size > 0) {
+        blocks.push(`import { ${[...used].sort().join(', ')} } from 'class-validator'`)
+      }
+      blocks.push(...dtos)
+      return `${blocks.join('\n\n')}\n`
+    })
   },
 })

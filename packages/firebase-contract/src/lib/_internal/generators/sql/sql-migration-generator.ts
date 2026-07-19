@@ -2,6 +2,7 @@ import { Ir, IrModel } from '../../ir/ir.js'
 import { pluralize, snakeCase } from '../support/naming.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
+import { outputFile } from '../support/templates.js'
 
 const tableName = (model: IrModel): string => model.table ?? pluralize(snakeCase(model.name))
 
@@ -47,6 +48,6 @@ export const createSqlMigrationGenerator = (): Generator => ({
     }
     const banner = headerBlocks(context, header => header.replace(/^\/\/ ?/gm, '-- '))
     const content = `${[...banner, blocks.join('\n')].join('\n\n')}\n`
-    return [{ path: 'migrations/constraints.sql', content }]
+    return [{ path: outputFile(context, 'migrations/constraints.sql'), content }]
   },
 })

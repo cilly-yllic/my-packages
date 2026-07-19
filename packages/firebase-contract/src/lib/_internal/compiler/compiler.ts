@@ -11,7 +11,8 @@ import { validateIr } from '../validation/validate.js'
 import { createDefaultRegistry } from '../generators/index.js'
 import { GeneratedFile, GeneratorContext } from '../generators/generator.js'
 import { toHeaderComment } from '../generators/support/header.js'
-import { kebabCase } from '../generators/support/naming.js'
+import { GeneratorOutputSettings } from '../generators/generator.js'
+import { API_PLACEHOLDER_RE, expandApiPlaceholders } from '../generators/support/templates.js'
 import { GeneratorRegistry } from '../generators/registry.js'
 
 export interface CompileOptions {
@@ -74,9 +75,10 @@ interface GeneratorJob {
   generatorName: string
   outDir: string
   apiNames?: string[]
+  output?: GeneratorOutputSettings
+  /** Raw per-generator header override (nearest-first: use → declaration). */
+  header?: string
 }
-
-const OUT_PLACEHOLDER_RE = /\{(api-name|path)\}/
 
 /** `apis:/tasks:/events:` section a raw api belongs to (drives the section defaults lookup). */
 const sectionOf = (api: RawApi): 'apis' | 'tasks' | 'events' => {
@@ -85,35 +87,24 @@ const sectionOf = (api: RawApi): 'apis' | 'tasks' | 'events' => {
   return 'apis'
 }
 
-/** Drop `{param}` segments from a REST path and join the rest (`/ai-models/{id}` → `ai-models`). */
-const pathSegments = (apiPath: string): string =>
-  apiPath
-    .split('/')
-    .filter(segment => segment.length > 0 && !(segment.startsWith('{') && segment.endsWith('}')))
-    .join('/')
-
 const expandOutTemplate = (
   template: string,
   api: { name: string; path?: string } | undefined,
   diagnostics: Diagnostic[],
   source: string
 ): string | undefined => {
-  if (!OUT_PLACEHOLDER_RE.test(template)) return template
+  if (!API_PLACEHOLDER_RE.test(template)) return template
   if (!api) {
     diagnostics.push(
       error('INVALID_OUT_TEMPLATE', `"${template}" uses api placeholders but the generator is document-scoped (${source})`)
     )
     return undefined
   }
-  let out = template.replaceAll('{api-name}', kebabCase(api.name))
-  if (out.includes('{path}')) {
-    if (!api.path) {
-      diagnostics.push(
-        error('INVALID_OUT_TEMPLATE', `"${template}" uses {path} but api "${api.name}" has no REST path (${source})`)
-      )
-      return undefined
-    }
-    out = out.replaceAll('{path}', pathSegments(api.path))
+  const out = expandApiPlaceholders(template, api)
+  if (out === undefined) {
+    diagnostics.push(
+      error('INVALID_OUT_TEMPLATE', `"${template}" uses {path} but api "${api.name}" has no REST path (${source})`)
+    )
   }
   return out
 }
@@ -184,17 +175,49 @@ const buildGeneratorJobs = (
         )
         continue
       }
+      // Output settings resolve nearest-first: entry use → declaration → the
+      // generator's built-in default (applied by the generator itself).
+      const generator = registry.get(use.generator)
+      const output: GeneratorOutputSettings = {}
+      const file = use.file ?? decl?.file
+      const split = use.split ?? decl?.split ?? generator?.defaultOutput?.split
+      const options = use.options ?? decl?.options
+      const header = use.header ?? decl?.header
+      if (file !== undefined) output.file = file
+      if (split !== undefined) output.split = split
+      if (options !== undefined) output.options = options
+      // Split mode needs a per-api file name; bundled mode cannot expand one.
+      const effectiveFile = file ?? generator?.defaultOutput?.file
+      if (effectiveFile !== undefined && split === false && API_PLACEHOLDER_RE.test(effectiveFile)) {
+        diagnostics.push(
+          error(
+            'INVALID_OUT_TEMPLATE',
+            `file "${effectiveFile}" uses api placeholders but split is false for generator "${use.generator}" — set a plain file name (${doc.filePath})`
+          )
+        )
+        continue
+      }
+      if (effectiveFile !== undefined && split === true && !API_PLACEHOLDER_RE.test(effectiveFile)) {
+        diagnostics.push(
+          error(
+            'INVALID_OUT_TEMPLATE',
+            `split is true for generator "${use.generator}" but file "${effectiveFile}" has no {api-name}/{path} placeholder, so per-api files would overwrite each other (${doc.filePath})`
+          )
+        )
+        continue
+      }
       const api = { name: apiName, ...(rawApi.path !== undefined ? { path: rawApi.path } : {}) }
       const expanded = expandOutTemplate(template, api, diagnostics, doc.filePath)
       if (expanded === undefined) continue
       const outDir = resolveOutDir(expanded, doc, rootDoc, diagnostics)
       if (outDir === undefined) continue
-      const key = `${use.generator}\u0000${outDir}`
+      const key = [use.generator, outDir, file ?? '', String(split ?? ''), JSON.stringify(options ?? null), header ?? '\u0001'].join('\u0000')
       const existing = grouped.get(key)
       if (existing) {
         existing.apiNames?.push(apiName)
       } else {
-        const job: GeneratorJob = { source: doc.filePath, generatorName: use.generator, outDir, apiNames: [apiName] }
+        const job: GeneratorJob = { source: doc.filePath, generatorName: use.generator, outDir, apiNames: [apiName], output }
+        if (header !== undefined) job.header = header
         grouped.set(key, job)
         jobs.push(job)
       }
@@ -208,11 +231,48 @@ const buildGeneratorJobs = (
       continue
     }
     if ((generator.scope ?? 'document') === 'api') continue // applied via entries, not by declaration
+    // Document-scoped `split` toggles between a generator and its `-split`
+    // variant (e.g. typescript ⇄ typescript-split) instead of reshaping output.
+    let generatorName = decl.generator
+    if (decl.split === true && !generatorName.endsWith('-split')) {
+      const splitName = `${generatorName}-split`
+      if (registry.get(splitName)) {
+        generatorName = splitName
+      } else {
+        diagnostics.push(
+          error('UNSUPPORTED_SPLIT', `Generator "${decl.generator}" has no split variant (${doc.filePath})`)
+        )
+        continue
+      }
+    } else if (decl.split === false && generatorName.endsWith('-split')) {
+      const baseName = generatorName.slice(0, -'-split'.length)
+      if (registry.get(baseName)) generatorName = baseName
+    }
+    const output: GeneratorOutputSettings = {}
+    if (decl.file !== undefined) {
+      if (API_PLACEHOLDER_RE.test(decl.file)) {
+        diagnostics.push(
+          error(
+            'INVALID_OUT_TEMPLATE',
+            `file "${decl.file}" uses api placeholders but generator "${decl.generator}" is document-scoped (${doc.filePath})`
+          )
+        )
+        continue
+      }
+      output.file = decl.file
+    }
+    if (decl.options !== undefined) output.options = decl.options
     const expanded = expandOutTemplate(decl.out, undefined, diagnostics, doc.filePath)
     if (expanded === undefined) continue
     const outDir = resolveOutDir(expanded, doc, rootDoc, diagnostics)
     if (outDir === undefined) continue
-    jobs.push({ source: doc.filePath, generatorName: decl.generator, outDir })
+    jobs.push({
+      source: doc.filePath,
+      generatorName,
+      outDir,
+      ...(Object.keys(output).length > 0 ? { output } : {}),
+      ...(decl.header !== undefined ? { header: decl.header } : {}),
+    })
   }
 
   return jobs
@@ -247,13 +307,26 @@ export const generateAll = (
       }
     }
   }
-  const runTarget = (doc: RawContract, outDir: string, generators: string[], apiNames?: string[]): void => {
+  const runTarget = (
+    doc: RawContract,
+    outDir: string,
+    generators: string[],
+    apiNames?: string[],
+    output?: GeneratorOutputSettings,
+    header?: string
+  ): void => {
     const result = generate(doc.filePath, {
       outDir,
       generators,
       registry,
       write: options.write,
-      context: { ...options.context, ...(apiNames ? { apiNames } : {}) },
+      context: {
+        ...options.context,
+        ...(apiNames ? { apiNames } : {}),
+        ...(output ? { output } : {}),
+        // Per-generator header beats the CLI/contract-level one ('' disables it).
+        ...(header !== undefined ? { header: toHeaderComment(header) } : {}),
+      },
       ...(options.loader ? { loader: options.loader } : {}),
     })
     mergeDiagnostics(result.diagnostics)
@@ -264,7 +337,7 @@ export const generateAll = (
     // Declaration/application DSL (`generators:` + section defaults / entry `generators:`).
     const jobDiagnostics: Diagnostic[] = []
     for (const job of buildGeneratorJobs(doc, rootDoc, registry, jobDiagnostics)) {
-      runTarget(doc, job.outDir, [job.generatorName], job.apiNames)
+      runTarget(doc, job.outDir, [job.generatorName], job.apiNames, job.output, job.header)
     }
     mergeDiagnostics(jobDiagnostics)
     if (hasErrors(jobDiagnostics)) ok = false

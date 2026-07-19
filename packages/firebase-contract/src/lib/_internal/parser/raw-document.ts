@@ -130,12 +130,24 @@ export interface RawGeneratorDecl {
    * resolved through the root document's `project.aliases`.
    */
   out: string
+  /** File name template (api-scoped; `{api-name}`/`{path}` allowed with split). */
+  file?: string
+  /** true: one file per api. false: one bundled file. Default: the generator's own. */
+  split?: boolean
+  /** Free-form generator-specific tweaks (string values). */
+  options?: Record<string, string>
+  /** Header override for this generator (`default` = built-in banner, `''` = none). */
+  header?: string
 }
 
-/** Generator application on a section default or an entry (name ref + optional out override). */
+/** Generator application on a section default or an entry (name ref + optional overrides). */
 export interface RawGeneratorUse {
   generator: string
   out?: string
+  file?: string
+  split?: boolean
+  options?: Record<string, string>
+  header?: string
 }
 
 /** Per-section generator defaults (`apis:/tasks:/events:` → `defaults.generators`). */

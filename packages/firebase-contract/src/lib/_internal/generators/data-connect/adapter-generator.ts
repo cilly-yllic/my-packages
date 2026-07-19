@@ -3,6 +3,7 @@ import { camelCase } from '../support/naming.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
+import { outputFile } from '../support/templates.js'
 
 const SCALAR_TS: Record<ScalarType, string> = {
   string: 'string',
@@ -156,6 +157,6 @@ export const createDataConnectAdapterGenerator = (): Generator => ({
       blocks.push(renderAdapter(model))
     }
 
-    return [{ path: 'data-connect-adapters.ts', content: `${blocks.join('\n\n')}\n` }]
+    return [{ path: outputFile(context, 'data-connect-adapters.ts'), content: `${blocks.join('\n\n')}\n` }]
   },
 })

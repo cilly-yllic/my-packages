@@ -100,19 +100,15 @@ describe('firestore type generator', () => {
 
 describe('default registry', () => {
   it('registers all built-in generators in priority order', () => {
+    // 分割レイアウトは別 id ではなく各 generator の split: true で選択する
     expect(createDefaultRegistry().names()).toEqual([
       'typescript',
-      'typescript-split',
       'zod',
-      'zod-split',
       'data-connect-graphql',
-      'data-connect-graphql-split',
       'data-connect-operations',
-      'data-connect-operations-split',
       'data-connect-adapter',
       'firestore-types',
       'firestore',
-      'firestore-split',
       'api-types',
       'api-validation',
       'api-dto',

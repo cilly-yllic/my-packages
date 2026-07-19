@@ -40,7 +40,7 @@ fbc inspect       # print the normalized IR (debugging)
 
 Each contract file declares the generators it uses in a top-level
 `generators:` block — a name plus an output template. Declaring a
-**document-scoped** generator (typescript-split, zod-split, …) runs it once for
+**document-scoped** generator (typescript, zod, …) runs it once for
 that yml; **api-scoped** generators (api-types, api-validation, api-dto,
 task-payloads) run for the entries that opt in (see below):
 
@@ -50,7 +50,7 @@ project:
   aliases:
     "#contracts/*": libs/contracts/src/*   # out templates may target aliases
 generators:
-  - { generator: typescript-split, out: "#contracts" }
+  - { generator: typescript, out: "#contracts", split: true }
   - { generator: api-types, out: "#contracts/api-types/{api-name}" }
 imports:
   - ./apps/shop/data-connect/schema.yml
@@ -59,7 +59,7 @@ imports:
 ```yaml
 # apps/shop/data-connect/schema.yml
 generators:
-  - { generator: data-connect-graphql-split, out: src }
+  - { generator: data-connect-graphql, out: src, split: true }
   - { generator: sql-migrations, out: . }
 ```
 
@@ -90,7 +90,7 @@ generators:
   - generator: typescript
     out: "#contracts"
     file: models.ts             # rename a single-file/barrel output
-    split: true                 # document scope: switches to typescript-split
+    split: true                 # document scope: per-table split layout
 ```
 
 - **`file`** — output file name. Api scope: a template (`{api-name}`/`{path}`
@@ -98,8 +98,9 @@ generators:
   or the barrel for `-split` variants.
 - **`split`** — api scope: `true` emits one file per api (the `file` template
   must contain a placeholder), `false` bundles everything into one `file`.
-  Document scope: `true` swaps to the generator's `-split` variant
-  (`typescript` → `typescript-split`, …) and errors when none exists.
+  Document scope: `true` selects the generator's per-item split layout
+  (typescript, zod, firestore, data-connect-graphql, data-connect-operations)
+  and errors for generators without one.
 - **`options`** — free-form string map passed through to the generator.
   Currently: `typesImport` (api-types, task-payloads, data-connect-operations)
   overrides the `./types` import path.
@@ -470,7 +471,7 @@ Emits Zod schemas + inferred types, mirroring a hand-written Firestore schema
 library. (The simpler `firestore-types` generator just re-types *every* model
 with the Firestore `Timestamp` and does not denormalize.)
 
-With `firestore-split`, fields whose Zod chain is **identical** to the Data
+With `firestore` + `split: true`, fields whose Zod chain is **identical** to the Data
 Connect schema are reused via `.pick()` — only representation changes are
 restated:
 
@@ -553,7 +554,7 @@ project:
 ```
 
 - `services` (`name`/`database`) feed the `FIRESTORE_DATABASES` constants in the
-  `firestore-split` barrel.
+  split `firestore` barrel.
 - `idCodec` pins the Sqids settings as a contract constant; when present, the
   `id-codecs` generator also emits a self-contained `id-core.ts` (the
   encode/decode primitives), so nothing about id encoding lives outside the
@@ -574,18 +575,13 @@ project:
 
 | name                     | scope    | output                        | notes                                                  |
 | ------------------------ | -------- | ----------------------------- | ------------------------------------------------------ |
-| `typescript`             | document | `types.ts`                    | interfaces + const/union enums                         |
-| `typescript-split`       | document | `types/<table>.ts` + `types.ts` barrel | one file per table; enums/embedded objects co-located |
-| `zod`                    | document | `schemas.ts`                  | `z.object` schemas (constraints, `z.lazy` model refs)  |
-| `zod-split`              | document | `schemas/<table>.ts` + `schemas.ts` barrel | split variant of `zod`                    |
-| `data-connect-graphql`   | document | `schema.gql`                  | `type … @table(name, key)`; `@col`/`@unique`/`@index`/`@default` |
-| `data-connect-graphql-split` | document | `schema/<table>.gql`     | same schema, one file per table (enums co-located) |
-| `data-connect-operations`| document | `<connector>/operations.gql` + `.ts` | queries/mutations (where ops, orderBy, limit, aggregate, exprs, inc), per connector |
-| `data-connect-operations-split` | document | `<connector>/operations/<entity>/{queries,mutations}.gql` | real Data Connect repo layout; shared types stay in `typescript`/`zod` outputs |
+| `typescript`             | document | `types.ts`; `split: true` → `types/<table>.ts` + barrel | interfaces + const/union enums; split co-locates enums/embedded objects per table |
+| `zod`                    | document | `schemas.ts`; `split: true` → `schemas/<table>.ts` + barrel | `z.object` schemas (constraints, `z.lazy` model refs)  |
+| `data-connect-graphql`   | document | `schema.gql`; `split: true` → `schema/<table>.gql` | `type … @table(name, key)`; `@col`/`@unique`/`@index`/`@default` |
+| `data-connect-operations`| document | `<connector>/operations.gql` + `.ts`; `split: true` → `<connector>/operations/<entity>/{queries,mutations}.gql` | queries/mutations (where ops, orderBy, limit, aggregate, exprs, inc), per connector; split matches the real Data Connect repo layout |
 | `data-connect-adapter`   | document | `data-connect-adapters.ts`    | convert `Any` rows ⇄ logical types                     |
 | `firestore-types`        | document | `firestore-types.ts`          | naive TS types with Firestore `Timestamp` (all models) |
-| `firestore`              | document | `firestore.ts`                | Firestore projection Zod schemas (derived, denormalized) |
-| `firestore-split`        | document | `firestore/<collection>.ts` + `firestore.ts` barrel | one file per projection; `_meta_` under `firestore/_/`; DC-schema `.pick()` reuse; `FIRESTORE_DATABASES` constants in the barrel |
+| `firestore`              | document | `firestore.ts`; `split: true` → `firestore/<collection>.ts` + barrel | Firestore projection Zod schemas (derived, denormalized); split adds `_meta_` under `firestore/_/`, DC-schema `.pick()` reuse, `FIRESTORE_DATABASES` constants in the barrel |
 | `api-types`              | api | `api-types.ts`                | endpoint request/response types                        |
 | `api-validation`         | api | `api-validation.ts`           | endpoint request-validation Zod                        |
 | `api-dto`                | api | `<operation>.dto.ts` per api  | class-validator DTO classes (NestJS `dto/` convention) |

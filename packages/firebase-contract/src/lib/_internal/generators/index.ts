@@ -13,6 +13,7 @@ import { createIdCodecGenerator } from './id/id-codec-generator.js'
 import { createSqlMigrationGenerator } from './sql/sql-migration-generator.js'
 import { createUnionGenerator } from './union/union-generator.js'
 import { GeneratorRegistry } from './registry.js'
+import { withSplitVariant } from './support/split-variant.js'
 import { createTypeScriptGenerator } from './typescript/typescript-generator.js'
 import { createTypeScriptSplitGenerator } from './typescript/typescript-split-generator.js'
 import { createZodGenerator } from './zod/zod-generator.js'
@@ -49,18 +50,13 @@ export { createConfigGenerator } from './config/config-generator.js'
  */
 export const createDefaultRegistry = (): GeneratorRegistry =>
   new GeneratorRegistry()
-    .register(createTypeScriptGenerator())
-    .register(createTypeScriptSplitGenerator())
-    .register(createZodGenerator())
-    .register(createZodSplitGenerator())
-    .register(createDataConnectGraphqlGenerator())
-    .register(createDataConnectGraphqlSplitGenerator())
-    .register(createDataConnectOperationsGenerator())
-    .register(createDataConnectOperationsSplitGenerator())
+    .register(withSplitVariant(createTypeScriptGenerator(), createTypeScriptSplitGenerator()))
+    .register(withSplitVariant(createZodGenerator(), createZodSplitGenerator()))
+    .register(withSplitVariant(createDataConnectGraphqlGenerator(), createDataConnectGraphqlSplitGenerator()))
+    .register(withSplitVariant(createDataConnectOperationsGenerator(), createDataConnectOperationsSplitGenerator()))
     .register(createDataConnectAdapterGenerator())
     .register(createFirestoreTypeGenerator())
-    .register(createFirestoreProjectionGenerator())
-    .register(createFirestoreSplitGenerator())
+    .register(withSplitVariant(createFirestoreProjectionGenerator(), createFirestoreSplitGenerator()))
     .register(createApiTypesGenerator())
     .register(createApiValidationGenerator())
     .register(createApiDtoGenerator())

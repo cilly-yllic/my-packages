@@ -51,6 +51,8 @@ export interface Generator {
   readonly scope?: 'api' | 'document'
   /** Built-in output defaults (api-scoped generators); overridable per declaration. */
   readonly defaultOutput?: { file: string; split: boolean }
+  /** Document scope: true when `split: true` switches to a per-item file layout. */
+  readonly splittable?: boolean
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[]
 }
 

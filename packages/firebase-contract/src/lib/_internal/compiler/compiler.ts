@@ -241,24 +241,18 @@ const buildGeneratorJobs = (
       continue
     }
     if ((generator.scope ?? 'document') === 'api') continue // applied via entries, not by declaration
-    // Document-scoped `split` toggles between a generator and its `-split`
-    // variant (e.g. typescript ⇄ typescript-split) instead of reshaping output.
-    let generatorName = decl.generator
-    if (decl.split === true && !generatorName.endsWith('-split')) {
-      const splitName = `${generatorName}-split`
-      if (registry.get(splitName)) {
-        generatorName = splitName
-      } else {
+    const output: GeneratorOutputSettings = {}
+    // Document scope: `split: true` selects the generator's per-item layout
+    // (dispatched inside the generator); reject it when none exists.
+    if (decl.split !== undefined) {
+      if (decl.split === true && generator.splittable !== true) {
         diagnostics.push(
-          error('UNSUPPORTED_SPLIT', `Generator "${decl.generator}" has no split variant (${doc.filePath})`)
+          error('UNSUPPORTED_SPLIT', `Generator "${decl.generator}" has no split layout (${doc.filePath})`)
         )
         continue
       }
-    } else if (decl.split === false && generatorName.endsWith('-split')) {
-      const baseName = generatorName.slice(0, -'-split'.length)
-      if (registry.get(baseName)) generatorName = baseName
+      output.split = decl.split
     }
-    const output: GeneratorOutputSettings = {}
     if (decl.file !== undefined) {
       if (API_PLACEHOLDER_RE.test(decl.file)) {
         diagnostics.push(
@@ -278,7 +272,7 @@ const buildGeneratorJobs = (
     if (outDir === undefined) continue
     jobs.push({
       source: doc.filePath,
-      generatorName,
+      generatorName: decl.generator,
       outDir,
       ...(Object.keys(output).length > 0 ? { output } : {}),
       ...(decl.header !== undefined ? { header: decl.header } : {}),

@@ -1,4 +1,4 @@
-import { Diagnostic, error } from '../diagnostics.js'
+import { Diagnostic, error, warning } from '../diagnostics.js'
 import {
   RawApi,
   RawApiPayload,
@@ -86,6 +86,52 @@ const OPERATION_TYPES = new Set<string>(['query', 'mutation'])
 const MUTATION_ACTIONS = new Set<string>(['insert', 'update', 'upsert', 'delete'])
 const AUTH_LEVELS = new Set<string>(['NO_ACCESS', 'PUBLIC', 'USER'])
 const API_KINDS = new Set<string>(['callable', 'https', 'task', 'pubsub'])
+const ORDER_DIRS = new Set<string>(['ASC', 'DESC'])
+const SINGLE_KINDS = new Set<string>(['key', 'id'])
+/** Per-key valid values for an operation's `style:` block. */
+const STYLE_VALUES: Record<string, Set<string>> = {
+  signature: new Set(['inline', 'multi']),
+  args: new Set(['inline', 'multi']),
+  data: new Set(['inline', 'multi', 'compact']),
+  orderBy: new Set(['bare', 'array']),
+  auth: new Set(['inline', 'newline']),
+  key: new Set(['inline', 'multi']),
+  and: new Set(['inline', 'multi']),
+  where: new Set(['inline', 'multi']),
+}
+/**
+ * Data Connect scalar/list filter operators. A `where.op` outside this set is
+ * warned (not errored): the value is emitted verbatim into GraphQL, so a typo
+ * ships broken schema, but the list may lag DC additions — a warning surfaces
+ * typos without rejecting a valid-but-unlisted operator.
+ */
+const WHERE_OPS = new Set<string>([
+  'eq', 'ne', 'gt', 'ge', 'lt', 'le', 'in', 'nin', 'isNull',
+  'contains', 'startsWith', 'endsWith',
+  'includes', 'excludes', 'includesAll', 'includesAny', 'excludesAll', 'excludesAny',
+])
+
+/**
+ * The contract is the single source of truth, so an out-of-vocabulary *value* is
+ * as much a defect as an unknown key: it is silently coerced to a default or
+ * dropped, and the generated output no longer reflects what was written. These
+ * checks turn that silent coercion into a diagnostic at the coercion site (the
+ * raw value is still in hand here; it is lost once the IR is built).
+ */
+const checkValue = (
+  diagnostics: Diagnostic[],
+  file: string,
+  path: string,
+  key: string,
+  value: string | undefined,
+  valid: Set<string>
+): void => {
+  if (value !== undefined && !valid.has(value)) {
+    diagnostics.push(
+      error('INVALID_VALUE', `Invalid ${key} "${value}" — expected one of ${[...valid].join(' | ')}`, { file, path })
+    )
+  }
+}
 
 type RawSelectEntry = { field: string; select?: unknown[]; description?: string; alias?: string; args?: string }
 
@@ -98,7 +144,27 @@ const buildSelect = (entries: RawSelectEntry[]): IrSelect[] =>
     ...(entry.args !== undefined ? { args: entry.args } : {}),
   }))
 
-const buildOperation = (name: string, raw: RawOperation, sourceFile: string): IrOperation => {
+const buildOperation = (name: string, raw: RawOperation, sourceFile: string, diagnostics: Diagnostic[]): IrOperation => {
+  const path = `operations.${name}`
+  checkValue(diagnostics, sourceFile, `${path}.type`, 'type', raw.type, OPERATION_TYPES)
+  checkValue(diagnostics, sourceFile, `${path}.auth`, 'auth', raw.auth, AUTH_LEVELS)
+  checkValue(diagnostics, sourceFile, `${path}.action`, 'action', raw.action, MUTATION_ACTIONS)
+  checkValue(diagnostics, sourceFile, `${path}.single`, 'single', raw.single, SINGLE_KINDS)
+  checkValue(diagnostics, sourceFile, `${path}.keyArg`, 'keyArg', raw.keyArg, SINGLE_KINDS)
+  for (const o of raw.orderBy ?? []) checkValue(diagnostics, sourceFile, `${path}.orderBy`, 'orderBy dir', o.dir, ORDER_DIRS)
+  for (const [k, v] of Object.entries(raw.style ?? {})) {
+    if (STYLE_VALUES[k]) checkValue(diagnostics, sourceFile, `${path}.style.${k}`, `style.${k}`, v as string, STYLE_VALUES[k])
+  }
+  for (const w of raw.where ?? []) {
+    if (w.op !== undefined && !WHERE_OPS.has(w.op)) {
+      diagnostics.push(
+        warning('UNKNOWN_WHERE_OP', `Unknown where operator "${w.op}" on ${path} — emitted verbatim into GraphQL; verify it is a valid Data Connect operator`, {
+          file: sourceFile,
+          path: `${path}.where`,
+        })
+      )
+    }
+  }
   const op: IrOperation = {
     name,
     operationType: (OPERATION_TYPES.has(raw.type) ? raw.type : 'query') as OperationType,
@@ -159,8 +225,10 @@ const buildApi = (
   raw: RawApi,
   sourceFile: string,
   enumNames: Set<string>,
-  modelNames: Set<string>
+  modelNames: Set<string>,
+  diagnostics: Diagnostic[]
 ): IrApi => {
+  checkValue(diagnostics, sourceFile, `apis.${name}.kind`, 'kind', raw.kind, API_KINDS)
   const api: IrApi = {
     name,
     kind: (API_KINDS.has(raw.kind) ? raw.kind : 'callable') as ApiKind,
@@ -356,12 +424,12 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
 
   const operations: IrOperation[] = []
   for (const { name, doc } of operationEntries) {
-    operations.push(buildOperation(name, doc.operations[name], doc.filePath))
+    operations.push(buildOperation(name, doc.operations[name], doc.filePath, diagnostics))
   }
 
   const apis: IrApi[] = []
   for (const [name, doc] of apiSources) {
-    apis.push(buildApi(name, doc.apis[name], doc.filePath, enumNames, modelNames))
+    apis.push(buildApi(name, doc.apis[name], doc.filePath, enumNames, modelNames, diagnostics))
   }
 
   const unionSources = new Map<string, RawContract>()

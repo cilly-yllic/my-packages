@@ -123,8 +123,9 @@ generators:
 
 `fbc generate contract.yml` materializes **all** declared outputs across the
 whole import graph in one run. Passing `-o`/`-g` switches to single-target mode
-(`fbc generate <entry> -o <dir> -g typescript,zod`), and
-`firebase-contract.json` (`entry`, `outDir`, `generators`) can hold defaults.
+(`fbc generate <entry> -o <dir> -g typescript,zod`). `firebase-contract.json`
+holds only a default `entry` — output routing lives in the yml `generators:`
+declarations, so a config file can never silently override them.
 
 
 ### Generated-file headers
@@ -193,8 +194,13 @@ firestore module is checked under `fsName ?? name` alongside doc names. A bare
 type reference therefore always resolves to exactly one definition — use
 `fbc where <Name>` to find it.
 
+**Unknown keys are errors.** Every key the parser does not consume is an
+`UNKNOWN_KEY` error (all reported in one pass), never silently dropped — a
+typo like `optionnal:` must not quietly turn into a required field. There is
+no `version:` field: nothing consumes one, so accepting it would only fake a
+compatibility mechanism that does not exist.
+
 ```yaml
-version: 1
 imports:
   - ./apps/shop/data-connect/schema.yml
   - some-shared-package/contract.yml
@@ -487,8 +493,11 @@ firestore:
 ```
 
 Emits Zod schemas + inferred types, mirroring a hand-written Firestore schema
-library. (The simpler `firestore-types` generator just re-types *every* model
-with the Firestore `Timestamp` and does not denormalize.)
+library. (`firestore-types` is the zero-config entry point for projects that
+have not written projections yet: it re-types *every* model with the Firestore
+`Timestamp`, no `firestore:` section needed. Once you declare projections,
+prefer the `firestore` generator — it is the one that understands
+pick/omit/fsName/denormalized fields.)
 
 With `firestore` + `split: true`, fields whose Zod chain is **identical** to the Data
 Connect schema are reused via `.pick()` — only representation changes are

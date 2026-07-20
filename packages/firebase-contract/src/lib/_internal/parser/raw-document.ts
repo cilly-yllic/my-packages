@@ -208,7 +208,6 @@ export interface RawContract {
   generatorDecls?: RawGeneratorDecl[]
   /** Section-level generator defaults (`apis:/tasks:/events:` → `defaults`). */
   sectionDefaults?: RawSectionDefaults
-  version: number
   /** Raw header text prepended to generated files (`default` = built-in banner). */
   header?: string
   project?: RawProject

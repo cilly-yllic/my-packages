@@ -60,7 +60,7 @@ export const collectDeps = (ir: Ir, roots: IrModel[]): HostedDeps => {
 /**
  * Assign a unique module basename to every table. Two models may share a
  * physical table name across services (e.g. both declare
- * `reconciliation_operations`); the first keeps the table-derived name and
+ * `audit_logs`); the first keeps the table-derived name and
  * later ones fall back to their model name so files never overwrite each other.
  */
 export const assignModuleNames = (tables: IrModel[]): Map<string, string> => {

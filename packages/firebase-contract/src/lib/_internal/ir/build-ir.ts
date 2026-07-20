@@ -412,8 +412,6 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
     firestore.push(buildFirestoreDoc(name, doc.firestore[name], doc.filePath, enumNames, modelNames))
   }
 
-  const version = documents.length > 0 ? documents[documents.length - 1].version : 1
-
   const envelopeSources = new Map<string, RawContract>()
   for (const doc of documents) {
     for (const name of Object.keys(doc.envelopes)) {
@@ -470,7 +468,6 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
 
   return {
     ir: {
-      version,
       enums,
       models,
       operations,

@@ -200,6 +200,14 @@ typo like `optionnal:` must not quietly turn into a required field. There is
 no `version:` field: nothing consumes one, so accepting it would only fake a
 compatibility mechanism that does not exist.
 
+**Out-of-vocabulary values are errors too.** A value outside a field's fixed
+set is `INVALID_VALUE` rather than a silent coercion: `auth: PUBILC` does not
+quietly become `NO_ACCESS`, `dir: Dsec` does not become `ASC`, and a mistyped
+`action` / `single` / `keyArg` / `style.*` is not dropped. The one exception is
+`where.op`, which is warned (`UNKNOWN_WHERE_OP`) not errored — it is emitted
+verbatim into GraphQL and the recognized-operator list may lag Data Connect, so
+a typo is surfaced without rejecting a valid-but-unlisted operator.
+
 ```yaml
 imports:
   - ./apps/shop/data-connect/schema.yml

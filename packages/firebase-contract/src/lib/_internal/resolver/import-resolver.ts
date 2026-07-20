@@ -63,7 +63,7 @@ export const resolveImports = (entryPath: string, loader: ModuleLoader): Resolve
 
     let document: RawContract
     try {
-      document = parseContract(content, id)
+      document = parseContract(content, id, diagnostics)
     } catch (thrown) {
       collectFrom(thrown)
       return

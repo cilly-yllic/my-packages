@@ -1,6 +1,6 @@
 import { parse as parseYamlText } from 'yaml'
 
-import { ContractError, error } from '../diagnostics.js'
+import { ContractError, Diagnostic, error } from '../diagnostics.js'
 
 import {
   RawApi,
@@ -27,6 +27,30 @@ const fail = (message: string, filePath: string, path?: string): never => {
   throw new ContractError(message, [error('PARSE_ERROR', message, { file: filePath, path })])
 }
 
+/**
+ * Sink for UNKNOWN_KEY diagnostics, set for the duration of one parseContract
+ * call (the parser is synchronous, so there is no reentrancy). Collected keys
+ * become errors instead of throws so a single pass reports every typo at once.
+ */
+let unknownKeySink: Diagnostic[] | undefined
+
+/**
+ * The contract is the single source of truth, so a key the parser would
+ * silently drop is either a typo about to change meaning (`optionnal:` making a
+ * field required) or dead weight lying about what the contract expresses.
+ * Either way it is an error, not a shrug.
+ */
+const checkKeys = (raw: Record<string, unknown>, known: readonly string[], filePath: string, path: string): void => {
+  if (!unknownKeySink) return
+  for (const key of Object.keys(raw)) {
+    if (!known.includes(key)) {
+      unknownKeySink.push(
+        error('UNKNOWN_KEY', `Unknown key "${key}" in ${path} — remove it or fix the typo`, { file: filePath, path: `${path}.${key}` })
+      )
+    }
+  }
+}
+
 const normalizeField = (raw: unknown, filePath: string, path: string): RawField => {
   // Shorthand: `title: string` — the value is the type name.
   if (typeof raw === 'string') {
@@ -38,6 +62,7 @@ const normalizeField = (raw: unknown, filePath: string, path: string): RawField 
   if (typeof raw.type !== 'string') {
     return fail(`Field "${path}" is missing a string "type"`, filePath, path)
   }
+  checkKeys(raw, ['type', 'optional', 'nullable', 'jsdoc', 'list', 'id', 'unique', 'relation', 'default', 'description', 'min', 'max', 'minLength', 'maxLength', 'pattern', 'nonempty', 'email', 'url', 'col', 'literal'], filePath, path)
   const field: RawField = { type: raw.type }
   if (raw.optional !== undefined) field.optional = Boolean(raw.optional)
   if (raw.nullable !== undefined) field.nullable = Boolean(raw.nullable)
@@ -69,6 +94,7 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
   if (!isObject(fieldsRaw)) {
     return fail(`Model "${name}" is missing a "fields" object`, filePath, `models.${name}.fields`)
   }
+  checkKeys(raw, ['fields', 'description', 'key', 'table', 'gqlName', 'directives', 'footer', 'fsName', 'indexes', 'sql'], filePath, `models.${name}`)
   const fields: Record<string, RawField> = {}
   for (const [fieldName, fieldRaw] of Object.entries(fieldsRaw)) {
     fields[fieldName] = normalizeField(fieldRaw, filePath, `models.${name}.fields.${fieldName}`)
@@ -89,6 +115,7 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
       if (!isObject(entry)) {
         return fail(`Model "${name}" index #${i} must be an object`, filePath, `models.${name}.indexes`)
       }
+      checkKeys(entry, ['fields', 'name', 'unique', 'expand'], filePath, `models.${name}.indexes[${i}]`)
       const index: { fields: string[]; name?: string; unique?: boolean; expand?: boolean } = {
         fields: asStringArray(entry.fields, filePath, `models.${name}.indexes[${i}].fields`),
       }
@@ -103,6 +130,7 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
       return fail(`Model "${name}" sql must be an object`, filePath, `models.${name}.sql`)
     }
     const sqlRaw = raw.sql
+    checkKeys(sqlRaw, ['checks', 'foreignKeys', 'indexes'], filePath, `models.${name}.sql`)
     const sql: NonNullable<RawModel['sql']> = {}
     if (sqlRaw.checks !== undefined) sql.checks = asStringArray(sqlRaw.checks, filePath, `models.${name}.sql.checks`)
     if (sqlRaw.foreignKeys !== undefined) {
@@ -113,6 +141,7 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
         if (!isObject(entry) || typeof entry.references !== 'string') {
           return fail(`Model "${name}" sql.foreignKeys[${i}] needs columns + references`, filePath, `models.${name}.sql.foreignKeys`)
         }
+        checkKeys(entry, ['columns', 'references', 'name'], filePath, `models.${name}.sql.foreignKeys[${i}]`)
         const fk: { columns: string[]; references: string; name?: string } = {
           columns: asStringArray(entry.columns, filePath, `models.${name}.sql.foreignKeys[${i}].columns`),
           references: entry.references,
@@ -129,6 +158,7 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
         if (!isObject(entry)) {
           return fail(`Model "${name}" sql.indexes[${i}] must be an object`, filePath, `models.${name}.sql.indexes`)
         }
+        checkKeys(entry, ['columns', 'name', 'unique'], filePath, `models.${name}.sql.indexes[${i}]`)
         const idx: { columns: string[]; name?: string; unique?: boolean } = {
           columns: asStringArray(entry.columns, filePath, `models.${name}.sql.indexes[${i}].columns`),
         }
@@ -149,11 +179,13 @@ const normalizeEnum = (raw: unknown, filePath: string, name: string): RawEnum =>
   if (!Array.isArray(raw.values)) {
     return fail(`Enum "${name}" is missing a "values" array`, filePath, `enums.${name}.values`)
   }
+  checkKeys(raw, ['values', 'gqlName', 'fsName', 'fsDescription', 'description'], filePath, `enums.${name}`)
   const values: string[] = []
   const valueComments: Record<string, string> = {}
   const valueKeys: Record<string, string> = {}
   for (const entry of raw.values) {
     if (isObject(entry) && typeof entry.value === 'string') {
+      checkKeys(entry, ['value', 'description', 'key'], filePath, `enums.${name}.values`)
       values.push(entry.value)
       if (entry.description !== undefined) valueComments[entry.value] = String(entry.description)
       if (entry.key !== undefined) valueKeys[entry.value] = String(entry.key)
@@ -189,6 +221,7 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
   if (typeof raw.model !== 'string') {
     return fail(`Operation "${name}" is missing a string "model"`, filePath, `operations.${name}.model`)
   }
+  checkKeys(raw, ['type', 'model', 'action', 'auth', 'authReason', 'inputs', 'select', 'where', 'orderBy', 'limit', 'single', 'keyArg', 'entityDir', 'whereAnd', 'gqlName', 'footer', 'raw', 'style', 'keyVars', 'aggregate', 'exprs', 'inc', 'connectors', 'description'], filePath, `operations.${name}`)
   const op: RawOperation = { type: raw.type, model: raw.model }
   if (raw.action !== undefined) op.action = String(raw.action)
   if (raw.auth !== undefined) op.auth = String(raw.auth)
@@ -200,6 +233,7 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
     op.inputs = raw.inputs.map(entry => {
       if (typeof entry === 'string') return { field: entry }
       if (isObject(entry) && typeof entry.field === 'string') {
+        checkKeys(entry, ['field', 'required', 'description', 'var', 'flat', 'literal', 'quote', 'inc', 'asKey'], filePath, `operations.${name}.inputs`)
         return {
           field: entry.field,
           ...(entry.required !== undefined ? { required: Boolean(entry.required) } : {}),
@@ -223,6 +257,7 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
       return entries.map(entry => {
         if (typeof entry === 'string') return { field: entry }
         if (isObject(entry) && typeof entry.field === 'string') {
+          checkKeys(entry, ['field', 'select', 'description', 'alias', 'args'], filePath, path)
           return {
             field: entry.field,
             ...(entry.select !== undefined ? { select: normalizeSelect(entry.select, `${path}.${entry.field}`) } : {}),
@@ -244,6 +279,7 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
     op.where = raw.where.map(entry => {
       if (typeof entry === 'string') return { field: entry, op: 'eq' }
       if (isObject(entry) && typeof entry.field === 'string') {
+        checkKeys(entry, ['field', 'op', 'required', 'description', 'var', 'literal', 'flat'], filePath, `operations.${name}.where`)
         return {
           field: entry.field,
           op: entry.op !== undefined ? String(entry.op) : 'eq',
@@ -266,11 +302,13 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
       if (!isObject(entry) || typeof entry.field !== 'string') {
         return fail(`Operation "${name}" orderBy entry needs a field`, filePath, `operations.${name}.orderBy`)
       }
+      checkKeys(entry, ['field', 'dir'], filePath, `operations.${name}.orderBy`)
       return { field: entry.field, dir: entry.dir !== undefined ? String(entry.dir).toUpperCase() : 'ASC' }
     })
   }
   if (raw.limit !== undefined) {
     if (isObject(raw.limit) && typeof raw.limit.var === 'string') {
+      checkKeys(raw.limit, ['var', 'default', 'required'], filePath, `operations.${name}.limit`)
       op.limit = {
         var: raw.limit.var,
         ...(raw.limit.default !== undefined ? { default: Number(raw.limit.default) } : {}),
@@ -292,7 +330,9 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
       return fail(`Operation "${name}" style must be a mapping`, filePath, `operations.${name}.style`)
     }
     const style: { signature?: string; args?: string; data?: string; orderBy?: string; auth?: string; key?: string; and?: string; where?: string } = {}
-    for (const k of ['signature', 'args', 'data', 'orderBy', 'auth', 'key', 'and', 'where'] as const) {
+    const styleKeys = ['signature', 'args', 'data', 'orderBy', 'auth', 'key', 'and', 'where'] as const
+    checkKeys(raw.style, styleKeys, filePath, `operations.${name}.style`)
+    for (const k of styleKeys) {
       if (raw.style[k] !== undefined) style[k] = String(raw.style[k])
     }
     op.style = style
@@ -306,6 +346,7 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
     if (!isObject(raw.aggregate)) {
       return fail(`Operation "${name}" aggregate must be an object`, filePath, `operations.${name}.aggregate`)
     }
+    checkKeys(raw.aggregate, ['count', 'sum'], filePath, `operations.${name}.aggregate`)
     op.aggregate = {
       count: raw.aggregate.count !== undefined ? Boolean(raw.aggregate.count) : false,
       sum: asStringArray(raw.aggregate.sum, filePath, `operations.${name}.aggregate.sum`),
@@ -324,15 +365,13 @@ const normalizeOperation = (raw: unknown, filePath: string, name: string): RawOp
     op.inc = raw.inc.map(entry => {
       if (typeof entry === 'string') return { field: entry }
       if (isObject(entry) && typeof entry.field === 'string') {
+        checkKeys(entry, ['field', 'var'], filePath, `operations.${name}.inc`)
         return { field: entry.field, ...(entry.var !== undefined ? { var: String(entry.var) } : {}) }
       }
       return fail(`Operation "${name}" inc entry must be a field or { field, var }`, filePath, `operations.${name}.inc`)
     })
   }
-  // `connector: app` (single) or `connectors: [app, api]` (multiple).
-  if (raw.connector !== undefined) {
-    op.connectors = [String(raw.connector)]
-  } else if (raw.connectors !== undefined) {
+  if (raw.connectors !== undefined) {
     op.connectors = asStringArray(raw.connectors, filePath, `operations.${name}.connectors`)
   }
   if (raw.description !== undefined) op.description = String(raw.description)
@@ -344,6 +383,7 @@ const normalizeApiPayload = (raw: unknown, filePath: string, path: string): RawA
   if (!isObject(raw)) {
     return fail(`"${path}" must be an object`, filePath, path)
   }
+  checkKeys(raw, ['model', 'void', 'fields'], filePath, path)
   const payload: RawApiPayload = {}
   if (raw.model !== undefined) payload.model = String(raw.model)
   if (raw.void !== undefined) payload.void = Boolean(raw.void)
@@ -376,6 +416,7 @@ const normalizeGeneratorUse = (raw: unknown, filePath: string, path: string): Ra
   if (!isObject(raw) || typeof raw.generator !== 'string') {
     return fail(`"${path}" must be a generator name or { generator, out?, file?, split?, options?, header? }`, filePath, path)
   }
+  checkKeys(raw, ['generator', 'out', 'file', 'split', 'options', 'header'], filePath, path)
   const use: RawGeneratorUse = { generator: raw.generator }
   if (raw.out !== undefined) use.out = String(raw.out)
   if (raw.file !== undefined) use.file = String(raw.file)
@@ -399,6 +440,7 @@ const normalizeSectionDefaults = (raw: unknown, filePath: string, section: strin
   if (!isObject(raw)) {
     return fail(`"${section}.${SECTION_DEFAULTS_KEY}" must be an object`, filePath, `${section}.${SECTION_DEFAULTS_KEY}`)
   }
+  checkKeys(raw, ['generators'], filePath, `${section}.${SECTION_DEFAULTS_KEY}`)
   if (raw.generators === undefined) return []
   return normalizeGeneratorUses(raw.generators, filePath, `${section}.${SECTION_DEFAULTS_KEY}.generators`)
 }
@@ -426,6 +468,7 @@ const normalizePathApi = (raw: unknown, filePath: string, pathKey: string): { na
   if (kind !== 'https' && kind !== 'callable') {
     return fail(`Api "${pathKey}" kind must be https|callable (tasks/events have their own sections)`, filePath, `apis.${pathKey}.kind`)
   }
+  checkKeys(raw, ['operationId', 'kind', 'method', 'description', 'request', 'response', 'generators'], filePath, `apis.${pathKey}`)
   const prefixed = METHOD_PREFIXED_KEY_RE.exec(pathKey)
   const keyMethod = prefixed?.[1]
   const routePath = prefixed?.[2] ?? pathKey
@@ -452,6 +495,7 @@ const normalizeTask = (raw: unknown, filePath: string, name: string): RawApi => 
   if (!isObject(raw)) {
     return fail(`Task "${name}" must be an object`, filePath, `tasks.${name}`)
   }
+  checkKeys(raw, ['description', 'envelope', 'maxAttempts', 'timeoutSeconds', 'request', 'response', 'generators'], filePath, `tasks.${name}`)
   const api: RawApi = { kind: 'task' }
   if (raw.description !== undefined) api.description = String(raw.description)
   if (raw.envelope !== undefined) api.envelope = String(raw.envelope)
@@ -470,6 +514,7 @@ const normalizeEvent = (raw: unknown, filePath: string, name: string): RawApi =>
   if (!isObject(raw)) {
     return fail(`Event "${name}" must be an object`, filePath, `events.${name}`)
   }
+  checkKeys(raw, ['description', 'envelope', 'maxAttempts', 'timeoutSeconds', 'topic', 'request', 'response', 'generators'], filePath, `events.${name}`)
   const api: RawApi = { kind: 'pubsub' }
   if (raw.description !== undefined) api.description = String(raw.description)
   if (raw.envelope !== undefined) api.envelope = String(raw.envelope)
@@ -491,6 +536,7 @@ const normalizeEnvelope = (raw: unknown, filePath: string, name: string): RawEnv
   if (!isObject(raw.fields)) {
     return fail(`Envelope "${name}" is missing a "fields" object`, filePath, `envelopes.${name}.fields`)
   }
+  checkKeys(raw, ['fields', 'description'], filePath, `envelopes.${name}`)
   const fields: Record<string, RawField> = {}
   for (const [fieldName, fieldRaw] of Object.entries(raw.fields)) {
     fields[fieldName] = normalizeField(fieldRaw, filePath, `envelopes.${name}.fields.${fieldName}`)
@@ -504,6 +550,7 @@ const normalizeFirestoreDoc = (raw: unknown, filePath: string, name: string): Ra
   if (!isObject(raw)) {
     return fail(`Firestore doc "${name}" must be an object`, filePath, `firestore.${name}`)
   }
+  checkKeys(raw, ['from', 'collection', 'description', 'meta', 'helpers', 'include', 'pick', 'omit', 'fields'], filePath, `firestore.${name}`)
   const doc: RawFirestoreDoc = {}
   if (raw.from !== undefined) doc.from = String(raw.from)
   if (raw.collection !== undefined) doc.collection = String(raw.collection)
@@ -533,6 +580,7 @@ const normalizeUnion = (raw: unknown, filePath: string, name: string): RawUnion 
   if (typeof raw.discriminant !== 'string') {
     return fail(`Union "${name}" is missing a string "discriminant"`, filePath, `unions.${name}.discriminant`)
   }
+  checkKeys(raw, ['discriminant', 'variants', 'description'], filePath, `unions.${name}`)
   const union: RawUnion = {
     discriminant: raw.discriminant,
     variants: asStringArray(raw.variants, filePath, `unions.${name}.variants`),
@@ -545,6 +593,7 @@ const normalizeProject = (raw: unknown, filePath: string): RawProject => {
   if (!isObject(raw)) {
     return fail('"project" must be an object', filePath, 'project')
   }
+  checkKeys(raw, ['services', 'codebases', 'idCodec', 'aliases'], filePath, 'project')
   const project: RawProject = {}
   if (raw.services !== undefined) {
     if (!Array.isArray(raw.services)) {
@@ -554,6 +603,7 @@ const normalizeProject = (raw: unknown, filePath: string): RawProject => {
       if (!isObject(entry) || typeof entry.name !== 'string') {
         return fail(`project.services[${i}] needs a name`, filePath, 'project.services')
       }
+      checkKeys(entry, ['name', 'database', 'location', 'connectors'], filePath, `project.services[${i}]`)
       const service: RawService = { name: entry.name }
       if (entry.database !== undefined) service.database = String(entry.database)
       if (entry.location !== undefined) service.location = String(entry.location)
@@ -572,6 +622,7 @@ const normalizeProject = (raw: unknown, filePath: string): RawProject => {
     project.codebases = codebases
   }
   if (isObject(raw.idCodec)) {
+    checkKeys(raw.idCodec, ['minLength', 'alphabet'], filePath, 'project.idCodec')
     const idCodec: { minLength?: number; alphabet?: string } = {}
     if (raw.idCodec.minLength !== undefined) idCodec.minLength = Number(raw.idCodec.minLength)
     if (raw.idCodec.alphabet !== undefined) idCodec.alphabet = String(raw.idCodec.alphabet)
@@ -593,10 +644,20 @@ const normalizeProject = (raw: unknown, filePath: string): RawProject => {
 /**
  * Parse a single YAML contract file into a {@link RawContract}. Shorthand forms
  * are normalized here so downstream code sees one canonical shape. Syntax and
- * structural problems throw a {@link ContractError}; semantic problems are left
- * for validation.
+ * structural problems throw a {@link ContractError}; unknown keys are collected
+ * into `diagnostics` as UNKNOWN_KEY errors (all of them in one pass); semantic
+ * problems are left for validation.
  */
-export const parseContract = (content: string, filePath: string): RawContract => {
+export const parseContract = (content: string, filePath: string, diagnostics?: Diagnostic[]): RawContract => {
+  unknownKeySink = diagnostics
+  try {
+    return parseContractInner(content, filePath)
+  } finally {
+    unknownKeySink = undefined
+  }
+}
+
+const parseContractInner = (content: string, filePath: string): RawContract => {
   let doc: unknown
   try {
     doc = parseYamlText(content)
@@ -609,7 +670,6 @@ export const parseContract = (content: string, filePath: string): RawContract =>
     // An empty file is a valid, contribution-free contract.
     return {
       filePath,
-      version: 1,
       imports: [],
       defaultConnectors: [],
       enums: {},
@@ -624,6 +684,7 @@ export const parseContract = (content: string, filePath: string): RawContract =>
   if (!isObject(doc)) {
     return fail('Contract root must be a mapping', filePath)
   }
+  checkKeys(doc, ['imports', 'defaults', 'header', 'project', 'generators', 'enums', 'models', 'operations', 'apis', 'tasks', 'events', 'firestore', 'unions', 'envelopes'], filePath, '(root)')
 
   const imports: string[] = []
   if (doc.imports !== undefined) {
@@ -664,6 +725,7 @@ export const parseContract = (content: string, filePath: string): RawContract =>
     if (!isObject(doc.defaults)) {
       return fail('"defaults" must be a mapping', filePath, 'defaults')
     }
+    checkKeys(doc.defaults, ['connectors'], filePath, 'defaults')
     defaultConnectors = asStringArray(doc.defaults.connectors, filePath, 'defaults.connectors')
   }
 
@@ -761,11 +823,8 @@ export const parseContract = (content: string, filePath: string): RawContract =>
     }
   }
 
-  const version = typeof doc.version === 'number' ? doc.version : 1
-
   const contract: RawContract = {
     filePath,
-    version,
     imports,
     defaultConnectors,
     enums,
@@ -793,6 +852,7 @@ export const parseContract = (content: string, filePath: string): RawContract =>
       if (typeof entry.out !== 'string') {
         return fail(`generators[${i}] needs a string "out"`, filePath, `generators[${i}].out`)
       }
+      checkKeys(entry, ['generator', 'out', 'file', 'split', 'options', 'header'], filePath, `generators[${i}]`)
       const decl: RawGeneratorDecl = { generator: entry.generator, out: entry.out }
       if (entry.file !== undefined) decl.file = String(entry.file)
       if (entry.split !== undefined) decl.split = Boolean(entry.split)

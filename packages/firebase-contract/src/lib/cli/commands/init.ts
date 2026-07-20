@@ -5,9 +5,7 @@ import { Command } from 'commander'
 
 import { CONFIG_FILENAME } from '../config.js'
 
-const EXAMPLE_CONTRACT = `version: 1
-
-# Declare generators once (name + output template); entries opt in below.
+const EXAMPLE_CONTRACT = `# Declare generators once (name + output template); entries opt in below.
 generators:
   - { generator: typescript, out: generated }
   - { generator: zod, out: generated }
@@ -41,26 +39,7 @@ models:
       createdAt: timestamp
 `
 
-const EXAMPLE_CONFIG =
-  JSON.stringify(
-    {
-      entry: 'contract.yml',
-      outDir: 'generated',
-      generators: [
-        'typescript',
-        'zod',
-        'data-connect-graphql',
-        'data-connect-operations',
-        'data-connect-adapter',
-        'firestore-types',
-        'firestore',
-        'api-types',
-        'api-validation',
-      ],
-    },
-    null,
-    2
-  ) + '\n'
+const EXAMPLE_CONFIG = JSON.stringify({ entry: 'contract.yml' }, null, 2) + '\n'
 
 const writeIfAbsent = (path: string, content: string, force: boolean): boolean => {
   if (existsSync(path) && !force) {

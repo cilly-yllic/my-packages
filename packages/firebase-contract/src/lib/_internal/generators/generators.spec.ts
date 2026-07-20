@@ -52,6 +52,42 @@ describe('typescript generator', () => {
   })
 })
 
+describe('bundled/split render parity', () => {
+  const PARITY = `
+enums:
+  Priority:
+    values:
+      - { value: S, key: STANDARD }
+      - { value: X, key: EXPRESS }
+models:
+  Ticket:
+    fields:
+      id: { type: id, id: true }
+      priority: Priority
+      note:
+        type: string
+        optional: true
+        nullable: true
+        description: |-
+          line one
+          line two
+`
+  const parityIr = (): Ir => buildIr([parseContract(PARITY, '/c.yml')]).ir
+
+  it('bundled typescript honors valueKeys, nullable, and multi-line docs like the split layout', () => {
+    const [file] = createTypeScriptGenerator().generate(parityIr())
+    expect(file.content).toContain("  STANDARD: 'S',")
+    expect(file.content).toContain("  EXPRESS: 'X',")
+    expect(file.content).toContain('note?: string | null')
+    expect(file.content).toContain('   * line two')
+  })
+
+  it('bundled zod honors nullable like the split layout', () => {
+    const [file] = createZodGenerator().generate(parityIr())
+    expect(file.content).toContain('note: z.string().nullable().optional(),')
+  })
+})
+
 describe('zod generator', () => {
   it('emits z.enum, lazy model refs, and optional/array modifiers', () => {
     const [file] = createZodGenerator().generate(sampleIr())

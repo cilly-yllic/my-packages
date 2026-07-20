@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { ContractError } from '../diagnostics.js'
+import { ContractError, Diagnostic } from '../diagnostics.js'
 
 import { parseContract } from './parse.js'
 
 describe('parseContract', () => {
-  it('parses models, enums, imports, and version', () => {
+  it('parses models, enums, and imports', () => {
     const yaml = `
-version: 2
 imports:
   - ./common.yml
 enums:
@@ -22,7 +21,6 @@ models:
       title: string
 `
     const contract = parseContract(yaml, '/proj/contract.yml')
-    expect(contract.version).toBe(2)
     expect(contract.imports).toEqual(['./common.yml'])
     expect(contract.enums.Status.values).toEqual(['a', 'b'])
     expect(contract.models.Product.description).toBe('a product')
@@ -38,7 +36,45 @@ models:
     const contract = parseContract('', '/p.yml')
     expect(contract.models).toEqual({})
     expect(contract.enums).toEqual({})
-    expect(contract.version).toBe(1)
+  })
+
+  it('reports unknown keys as UNKNOWN_KEY errors instead of ignoring them', () => {
+    const diagnostics: Diagnostic[] = []
+    parseContract(
+      `
+version: 1
+models:
+  M:
+    tabel: ms
+    fields:
+      name: { type: string, optionnal: true }
+`,
+      '/p.yml',
+      diagnostics
+    )
+    const found = diagnostics.filter(d => d.code === 'UNKNOWN_KEY')
+    expect(found).toHaveLength(3) // version (removed), tabel, optionnal
+    expect(found.every(d => d.severity === 'error')).toBe(true)
+    expect(found.map(d => d.path)).toEqual(['(root).version', 'models.M.tabel', 'models.M.fields.name.optionnal'])
+  })
+
+  it('collects no UNKNOWN_KEY diagnostics for a fully known contract', () => {
+    const diagnostics: Diagnostic[] = []
+    parseContract(
+      `
+enums:
+  Status:
+    values: [{ value: a, key: A, description: d }]
+models:
+  M:
+    gqlName: MM
+    fields:
+      id: { type: id, id: true }
+`,
+      '/p.yml',
+      diagnostics
+    )
+    expect(diagnostics).toEqual([])
   })
 
   it('throws when a field has no type', () => {

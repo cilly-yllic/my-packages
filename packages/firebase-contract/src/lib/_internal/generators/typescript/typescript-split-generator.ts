@@ -1,95 +1,10 @@
-import { findEnum, findModel, Ir, IrEnum, IrField, IrModel, IrTypeRef, ScalarType } from '../../ir/ir.js'
+import { findEnum, findModel, Ir, IrEnum, IrModel } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
-import { constantCase, singleQuote } from '../support/naming.js'
-import { isRelation, relationFkName, relationFkType } from '../support/relations.js'
+import { isRelation } from '../support/relations.js'
 import { assignModuleNames, collectDeps, splitGroups } from '../support/split.js'
 import { outputFile } from '../support/templates.js'
-
-const SCALAR_TS: Record<ScalarType, string> = {
-  string: 'string',
-  int: 'number',
-  int64: 'number',
-  float: 'number',
-  boolean: 'boolean',
-  timestamp: 'string',
-  date: 'string',
-  json: 'Json',
-  id: 'string',
-}
-
-const JSON_TYPE = [
-  'export type Json =',
-  '  | string',
-  '  | number',
-  '  | boolean',
-  '  | null',
-  '  | Json[]',
-  '  | { [key: string]: Json }',
-].join('\n')
-
-const renderRef = (ref: IrTypeRef): string => {
-  switch (ref.kind) {
-    case 'scalar':
-      return SCALAR_TS[ref.name]
-    case 'enum':
-    case 'model':
-      return ref.name
-    default:
-      return 'unknown'
-  }
-}
-
-const docLines = (description: string | undefined, indent: string): string[] => {
-  if (!description) return []
-  const lines = description.split('\n')
-  if (lines.length === 1) return [`${indent}/** ${lines[0]} */`]
-  return [`${indent}/**`, ...lines.map(line => `${indent} * ${line}`.trimEnd()), `${indent} */`]
-}
-
-const renderField = (field: IrField, ir: Ir): string => {
-  const optional = field.optional ? '?' : ''
-  const doc = docLines(field.description, '  ')
-  let entry: string
-  if (field.literal !== undefined) {
-    const type = field.list ? `${singleQuote(field.literal)}[]` : singleQuote(field.literal)
-    entry = `  ${field.name}${optional}: ${type}`
-  } else if (isRelation(field)) {
-    const base = SCALAR_TS[relationFkType(ir, field)]
-    entry = `  ${relationFkName(field)}${optional}: ${field.list ? `${base}[]` : base}`
-  } else {
-    const base = renderRef(field.type)
-    const type = field.list ? `${base}[]` : base
-    const nullable = field.nullable ? ' | null' : ''
-    entry = `  ${field.name}${optional}: ${type}${nullable}`
-  }
-  return [...doc, entry].join('\n')
-}
-
-const renderEnumConst = (irEnum: IrEnum): string => {
-  const doc = docLines(irEnum.description, '')
-  const constName = constantCase(irEnum.name)
-  const entries = irEnum.values
-    .map(value => `  ${irEnum.valueKeys?.[value] ?? constantCase(value)}: ${singleQuote(value)},`)
-    .join('\n')
-  return [
-    ...doc,
-    `export const ${constName} = Object.freeze({`,
-    entries,
-    `} as const)`,
-    `export type ${irEnum.name}Key = keyof typeof ${constName}`,
-    `export type ${irEnum.name} = (typeof ${constName})[${irEnum.name}Key]`,
-  ].join('\n')
-}
-
-const renderModel = (model: IrModel, ir: Ir): string => {
-  const doc = docLines(model.description, '')
-  const fields = model.fields.map(field => renderField(field, ir)).join('\n')
-  return [...doc, `export interface ${model.name} {`, fields, '}'].join('\n')
-}
-
-const usesJson = (models: IrModel[]): boolean =>
-  models.some(model => model.fields.some(field => field.type.kind === 'scalar' && field.type.name === 'json'))
+import { JSON_TYPE, renderEnumConst, renderModel, usesJson } from './render.js'
 
 /**
  * Split variant of the TypeScript generator: one file per table at

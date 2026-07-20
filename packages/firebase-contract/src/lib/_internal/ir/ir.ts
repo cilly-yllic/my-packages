@@ -375,7 +375,6 @@ export interface IrProject {
 }
 
 export interface Ir {
-  version: number
   enums: IrEnum[]
   models: IrModel[]
   operations: IrOperation[]

@@ -245,8 +245,10 @@ export type ProductStatusKey = keyof typeof PRODUCT_STATUS
 export type ProductStatus = (typeof PRODUCT_STATUS)[ProductStatusKey]
 ```
 
-Pass `enumStyle: 'union'` to the TypeScript generator for a plain
-`'OPEN' | 'DONE' | 'DISABLED'` union instead.
+For a plain `'OPEN' | 'DONE' | 'DISABLED'` union instead, construct the
+TypeScript generator with `enumStyle: 'union'` via the programmatic API
+(`createTypeScriptGenerator({ enumStyle: 'union' })`). This is a build-time
+generator option, not a YAML contract field.
 
 ## Models
 
@@ -281,24 +283,24 @@ models:
 
 | option                              | meaning                                                  |
 | ----------------------------------- | -------------------------------------------------------- |
-| `type`                              | document | scalar name, or an enum/model name                       |
-| `optional`                          | document | value may be absent (`field?`)                           |
-| `list`                              | document | value is an array of `type`                              |
-| `id`                                | document | marks the (single) primary identifier                    |
-| `unique`                            | document | field-level unique → `@unique`                           |
-| `relation`                          | document | model-typed field is a foreign-key relation (see below)  |
-| `col`                               | document | Data Connect column dataType (Int64 PKs default to `bigserial`) |
-| `default`                           | document | `@default(expr: …)` on the DC column                     |
-| `literal`                           | document | pin to one literal value (union discriminant tags)       |
-| `nullable`                          | document | value may be `null` (`.nullable()` / `\| null`)          |
-| `description`                       | document | doc comment carried into generated output                |
-| `jsdoc`                             | document | render the description as a JSDoc block (Firestore fields) |
+| `type`                              | scalar name, or an enum/model name                       |
+| `optional`                          | value may be absent (`field?`)                           |
+| `list`                              | value is an array of `type`                              |
+| `id`                                | marks the (single) primary identifier                    |
+| `unique`                            | field-level unique → `@unique`                           |
+| `relation`                          | model-typed field is a foreign-key relation (see below)  |
+| `col`                               | Data Connect column dataType (Int64 PKs default to `bigserial`) |
+| `default`                           | `@default(expr: …)` on the DC column                     |
+| `literal`                           | pin to one literal value (union discriminant tags)       |
+| `nullable`                          | value may be `null` (`.nullable()` / `\| null`)          |
+| `description`                       | doc comment carried into generated output                |
+| `jsdoc`                             | render the description as a JSDoc block (Firestore fields) |
 | **constraints** →                   |                                                          |
-| `min` / `max`                       | document | numeric bounds                                           |
-| `minLength` / `maxLength`           | document | string/array length bounds                               |
-| `nonempty`                          | document | non-empty string/array                                   |
-| `pattern`                           | document | regex the string must match                              |
-| `email` / `url`                     | document | string format                                            |
+| `min` / `max`                       | numeric bounds                                           |
+| `minLength` / `maxLength`           | string/array length bounds                               |
+| `nonempty`                          | non-empty string/array                                   |
+| `pattern`                           | regex the string must match                              |
+| `email` / `url`                     | string format                                            |
 
 Constraints flow into the Zod schemas, the API request validation, and the
 class-validator DTOs.
@@ -307,14 +309,14 @@ class-validator DTOs.
 
 | option       | meaning                                                             |
 | ------------ | ------------------------------------------------------------------ |
-| `key`        | document | composite primary key field names (else the `id: true` field)      |
-| `table`      | document | table name override (default: snake_case pluralization)            |
-| `gqlName`    | document | GraphQL type name override                                          |
-| `fsName`     | document | Firestore-side rename (avoid collisions with table models)          |
-| `directives` | document | `multi` = each type-level directive on its own line                 |
-| `footer`     | document | trailing comment block after the closing `}` in the schema file     |
-| `indexes`    | document | composite `@index`/`@unique` (`{ fields, name?, unique?, expand? }` — `expand` renders args one per line) |
-| `sql`        | document | raw SQL constraints (see [SQL migrations](#sql-migrations))         |
+| `key`        | composite primary key field names (else the `id: true` field)      |
+| `table`      | table name override (default: snake_case pluralization)            |
+| `gqlName`    | GraphQL type name override                                          |
+| `fsName`     | Firestore-side rename (avoid collisions with table models)          |
+| `directives` | `multi` = each type-level directive on its own line                 |
+| `footer`     | trailing comment block after the closing `}` in the schema file     |
+| `indexes`    | composite `@index`/`@unique` (`{ fields, name?, unique?, expand? }` — `expand` renders args one per line) |
+| `sql`        | raw SQL constraints (see [SQL migrations](#sql-migrations))         |
 
 ### Embedded vs relation
 
@@ -392,14 +394,14 @@ Everything below exists to reproduce real hand-written `.gql` files byte-for-byt
 
 | option | meaning |
 | --- | --- |
-| `gqlName` | document | rendered operation name (the yml key stays unique across services) |
-| `footer` | document | trailing `# …` comment block after the operation |
-| `raw` | document | emit the operation body verbatim (multi-model queries, `_or` keyset cursors — field checks are skipped) |
-| `single: id \| document | key` | single-row lookup (`product(id: $id)` / `product(key: { … })`) |
-| `keyArg` / `keyVars` | document | update/delete key argument form and variable renames |
-| `whereAnd: true` | document | render conditions as an `_and: [ … ]` array |
-| `entityDir` | document | override the `operations/<entity>/` output directory |
-| `style` | document | formatting hints: `signature`, `args`, `data`, `orderBy`, `auth`, `key`, `and`, `where` (`inline`/`multi`/`compact`/`bare`) |
+| `gqlName` | rendered operation name (the yml key stays unique across services) |
+| `footer` | trailing `# …` comment block after the operation |
+| `raw` | emit the operation body verbatim (multi-model queries, `_or` keyset cursors — field checks are skipped) |
+| `single: id \| key` | single-row lookup (`product(id: $id)` / `product(key: { … })`) |
+| `keyArg` / `keyVars` | update/delete key argument form and variable renames |
+| `whereAnd: true` | render conditions as an `_and: [ … ]` array |
+| `entityDir` | override the `operations/<entity>/` output directory |
+| `style` | formatting hints: `signature`, `args`, `data`, `orderBy`, `auth`, `key`, `and`, `where` (`inline`/`multi`/`compact`/`bare`) |
 
 Inputs support `var` (variable rename), `required` (override optionality),
 `literal` (fixed value, no variable), `flat` (write the FK column directly),
@@ -572,6 +574,10 @@ firestore:
     from: Shop
     extends: [meta]            # appends `_meta_: MetaSchema` (imported from './_')
 ```
+
+`extends` referencing a fragment that is not declared is an `UNKNOWN_FRAGMENT`
+error, not a silent no-op — a typo like `extends: [metaa]` fails generation
+rather than quietly dropping the shared fields.
 
 ## Discriminated unions
 

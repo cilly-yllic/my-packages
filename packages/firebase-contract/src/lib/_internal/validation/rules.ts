@@ -1,7 +1,7 @@
 import { Diagnostic, error, warning } from '../diagnostics.js'
 import { constantCase } from '../generators/support/naming.js'
 import { isTable } from '../generators/support/split.js'
-import { findModel, Ir, IrApiPayload } from '../ir/ir.js'
+import { findFragment, findModel, Ir, IrApiPayload } from '../ir/ir.js'
 
 /**
  * A validation rule inspects the IR and returns any problems it finds. Rules are
@@ -329,6 +329,24 @@ export const unions: ValidationRule = ir =>
     return diagnostics
   })
 
+/**
+ * A firestore doc's `extends` must reference a declared fragment. An unknown
+ * name would otherwise resolve to no fields and silently drop the shared
+ * columns (`extends: [metaa]` → no `_meta_`), the exact silent-coercion class
+ * the contract-is-truth rules exist to kill.
+ */
+export const fragmentRefs: ValidationRule = ir =>
+  ir.firestore.flatMap(doc =>
+    doc.extends
+      .filter(name => !findFragment(ir, name))
+      .map(name =>
+        error('UNKNOWN_FRAGMENT', `Firestore doc "${doc.name}" extends unknown fragment "${name}"`, {
+          file: doc.sourceFile,
+          path: `firestore.${doc.name}.extends`,
+        })
+      )
+  )
+
 /** A single generated identifier claimed by a definition within one output namespace. */
 interface NameClaim {
   /** Human-readable owner, e.g. `model "Task"` — claims by the same owner never collide. */
@@ -484,5 +502,6 @@ export const DEFAULT_RULES: ValidationRule[] = [
   apis,
   firestore,
   unions,
+  fragmentRefs,
   nameCollisions,
 ]

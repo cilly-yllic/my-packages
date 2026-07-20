@@ -120,6 +120,26 @@ describe('validateIr', () => {
     ).toContain('UNKNOWN_API_MODEL')
   })
 
+  it('flags a firestore doc extending an unknown fragment', () => {
+    const found = codes(
+      ir({
+        fragments: [{ name: 'meta', fields: [field('_meta_')] }],
+        firestore: [{ name: 'Shop', collection: 'shops/{id}', pick: [], omit: [], fields: [], extends: ['metaa'] }],
+      })
+    )
+    expect(found).toContain('UNKNOWN_FRAGMENT')
+  })
+
+  it('accepts a firestore doc extending a declared fragment', () => {
+    const found = codes(
+      ir({
+        fragments: [{ name: 'meta', fields: [field('_meta_')] }],
+        firestore: [{ name: 'Shop', collection: 'shops/{id}', pick: [], omit: [], fields: [], extends: ['meta'] }],
+      })
+    )
+    expect(found).not.toContain('UNKNOWN_FRAGMENT')
+  })
+
   describe('nameCollisions', () => {
     const idField = (): IrField => field('id', { type: { kind: 'scalar', name: 'id' }, isId: true })
 

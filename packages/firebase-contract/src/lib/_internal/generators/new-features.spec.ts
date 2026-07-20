@@ -65,11 +65,16 @@ apis:
         id: int
     response:
       model: Product
+fragments:
+  meta:
+    fields:
+      _meta_: { type: string }
 firestore:
   Product:
     from: Product
     collection: shops/{wsId}/catalogs/{catalogId}/products/{productNo}
     omit: [shop, id]
+    extends: [meta]
     fields:
       parentProductNos: { type: int, list: true }
       childProductNos: { type: int, list: true }
@@ -164,19 +169,19 @@ describe('api generators', () => {
 })
 
 describe('firestore projection generator', () => {
-  it('derives from the model, resolves relations to ids, dates timestamps, adds _meta_', () => {
+  it('derives from the model, resolves relations to ids, dates timestamps, splices fragments via extends', () => {
     const [file] = createFirestoreProjectionGenerator().generate(irOf())
     expect(file.content).toContain("import { z } from 'zod'")
-    expect(file.content).toContain('export const _Meta_Schema = z.object({')
     expect(file.content).toContain('export const ProductSchema = z.object({')
     // kept base fields
     expect(file.content).toContain('title: z.string(),')
     expect(file.content).toContain("status: z.enum(['OPEN', 'DONE']),")
     // omitted the relation + id
     expect(file.content).not.toContain('shopId:')
-    // denormalized additions + envelope
+    // denormalized additions
     expect(file.content).toContain('parentProductNos: z.array(z.number()),')
     expect(file.content).toContain('linkedCatalogTitle: z.string().nullable(),')
-    expect(file.content).toContain('_meta_: _Meta_Schema,')
+    // fragment field spliced in via `extends: [meta]`
+    expect(file.content).toContain('_meta_: z.string(),')
   })
 })

@@ -18,6 +18,7 @@ import {
   IrEnvelope,
   IrField,
   IrFirestoreDoc,
+  IrFragment,
   IrModel,
   IrOperation,
   IrProject,
@@ -270,7 +271,7 @@ const buildFirestoreDoc = (
     pick: raw.pick ?? [],
     omit: raw.omit ?? [],
     fields,
-    meta: raw.meta ?? true,
+    extends: raw.extends ?? [],
     sourceFile,
   }
   if (raw.from !== undefined) doc.from = raw.from
@@ -358,6 +359,8 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
       })),
       sourceFile: doc.filePath,
     }
+    if (raw.out !== undefined) model.out = raw.out
+    if (raw.file !== undefined) model.file = raw.file
     if (raw.description !== undefined) model.description = raw.description
     if (raw.table !== undefined) model.table = raw.table
     if (raw.gqlName !== undefined) model.gqlName = raw.gqlName
@@ -509,6 +512,35 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
     envelopes.push(envelope)
   }
 
+  const fragmentSources = new Map<string, RawContract>()
+  for (const doc of documents) {
+    for (const name of Object.keys(doc.fragments)) {
+      if (fragmentSources.has(name)) {
+        diagnostics.push(
+          error('DUPLICATE_DEFINITION', `Fragment "${name}" is defined more than once`, {
+            file: doc.filePath,
+            path: `fragments.${name}`,
+          })
+        )
+        continue
+      }
+      fragmentSources.set(name, doc)
+    }
+  }
+  const fragments: IrFragment[] = []
+  for (const [name, doc] of fragmentSources) {
+    const raw = doc.fragments[name]
+    const fragment: IrFragment = {
+      name,
+      fields: Object.entries(raw.fields).map(([fieldName, rawField]) =>
+        buildField(fieldName, rawField, enumNames, modelNames)
+      ),
+      sourceFile: doc.filePath,
+    }
+    if (raw.description !== undefined) fragment.description = raw.description
+    fragments.push(fragment)
+  }
+
   let header: string | undefined
   for (const doc of documents) {
     if (doc.header !== undefined) {
@@ -543,6 +575,7 @@ export const buildIr = (documents: RawContract[]): BuildIrResult => {
       firestore,
       unions,
       envelopes,
+      fragments,
       ...(project ? { project } : {}),
       ...(header !== undefined ? { header } : {}),
     },

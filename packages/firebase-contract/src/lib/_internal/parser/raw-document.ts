@@ -67,6 +67,16 @@ export interface RawModel {
   fsName?: string
   indexes?: RawIndex[]
   sql?: RawSqlConstraints
+  /**
+   * Pin this value-object's split output to a fixed directory (relative to the
+   * generator `out`), e.g. `_` → `firestore/_/…`. A model with `out` is a
+   * placement-scoped value object: it is emitted only at this location by the
+   * owning split generator (firestore) and excluded from the default
+   * typescript/zod barrels. Split layouts only.
+   */
+  out?: string
+  /** File name for a placement-pinned value object (default: the `out` dir's index style). */
+  file?: string
 }
 
 export interface RawOperation {
@@ -169,11 +179,18 @@ export interface RawFirestoreDoc {
   pick?: string[]
   omit?: string[]
   fields?: Record<string, RawField>
-  meta?: boolean
+  /** Fragments to splice into this projection (their fields are appended). */
+  extends?: string[]
   /** Embedded models to host in this projection file even when unreferenced. */
   include?: string[]
   /** Verbatim TypeScript helpers emitted into the projection file. */
   helpers?: string
+}
+
+/** A reusable named group of fields, spliced into a consumer via `extends`. */
+export interface RawFragment {
+  description?: string
+  fields: Record<string, RawField>
 }
 
 export interface RawUnion {
@@ -222,4 +239,5 @@ export interface RawContract {
   firestore: Record<string, RawFirestoreDoc>
   unions: Record<string, RawUnion>
   envelopes: Record<string, RawEnvelope>
+  fragments: Record<string, RawFragment>
 }

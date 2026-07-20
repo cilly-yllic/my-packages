@@ -14,6 +14,7 @@ import {
   RawOperation,
   RawProject,
   RawService,
+  RawFragment,
   RawGeneratorDecl,
   RawGeneratorUse,
   RawSectionDefaults,
@@ -94,12 +95,14 @@ const normalizeModel = (raw: unknown, filePath: string, name: string): RawModel 
   if (!isObject(fieldsRaw)) {
     return fail(`Model "${name}" is missing a "fields" object`, filePath, `models.${name}.fields`)
   }
-  checkKeys(raw, ['fields', 'description', 'key', 'table', 'gqlName', 'directives', 'footer', 'fsName', 'indexes', 'sql'], filePath, `models.${name}`)
+  checkKeys(raw, ['fields', 'description', 'key', 'table', 'gqlName', 'directives', 'footer', 'fsName', 'indexes', 'sql', 'out', 'file'], filePath, `models.${name}`)
   const fields: Record<string, RawField> = {}
   for (const [fieldName, fieldRaw] of Object.entries(fieldsRaw)) {
     fields[fieldName] = normalizeField(fieldRaw, filePath, `models.${name}.fields.${fieldName}`)
   }
   const model: RawModel = { fields }
+  if (raw.out !== undefined) model.out = String(raw.out)
+  if (raw.file !== undefined) model.file = String(raw.file)
   if (raw.description !== undefined) model.description = String(raw.description)
   if (raw.key !== undefined) model.key = asStringArray(raw.key, filePath, `models.${name}.key`)
   if (raw.table !== undefined) model.table = String(raw.table)
@@ -550,12 +553,12 @@ const normalizeFirestoreDoc = (raw: unknown, filePath: string, name: string): Ra
   if (!isObject(raw)) {
     return fail(`Firestore doc "${name}" must be an object`, filePath, `firestore.${name}`)
   }
-  checkKeys(raw, ['from', 'collection', 'description', 'meta', 'helpers', 'include', 'pick', 'omit', 'fields'], filePath, `firestore.${name}`)
+  checkKeys(raw, ['from', 'collection', 'description', 'extends', 'helpers', 'include', 'pick', 'omit', 'fields'], filePath, `firestore.${name}`)
   const doc: RawFirestoreDoc = {}
   if (raw.from !== undefined) doc.from = String(raw.from)
   if (raw.collection !== undefined) doc.collection = String(raw.collection)
   if (raw.description !== undefined) doc.description = String(raw.description)
-  if (raw.meta !== undefined) doc.meta = Boolean(raw.meta)
+  if (raw.extends !== undefined) doc.extends = asStringArray(raw.extends, filePath, `firestore.${name}.extends`)
   if (raw.helpers !== undefined) doc.helpers = String(raw.helpers)
   if (raw.include !== undefined) doc.include = asStringArray(raw.include, filePath, `firestore.${name}.include`)
   doc.pick = asStringArray(raw.pick, filePath, `firestore.${name}.pick`)
@@ -571,6 +574,23 @@ const normalizeFirestoreDoc = (raw: unknown, filePath: string, name: string): Ra
     doc.fields = fields
   }
   return doc
+}
+
+const normalizeFragment = (raw: unknown, filePath: string, name: string): RawFragment => {
+  if (!isObject(raw)) {
+    return fail(`Fragment "${name}" must be an object`, filePath, `fragments.${name}`)
+  }
+  if (!isObject(raw.fields)) {
+    return fail(`Fragment "${name}" is missing a "fields" object`, filePath, `fragments.${name}.fields`)
+  }
+  checkKeys(raw, ['fields', 'description'], filePath, `fragments.${name}`)
+  const fields: Record<string, RawField> = {}
+  for (const [fieldName, fieldRaw] of Object.entries(raw.fields)) {
+    fields[fieldName] = normalizeField(fieldRaw, filePath, `fragments.${name}.fields.${fieldName}`)
+  }
+  const fragment: RawFragment = { fields }
+  if (raw.description !== undefined) fragment.description = String(raw.description)
+  return fragment
 }
 
 const normalizeUnion = (raw: unknown, filePath: string, name: string): RawUnion => {
@@ -679,12 +699,13 @@ const parseContractInner = (content: string, filePath: string): RawContract => {
       firestore: {},
       unions: {},
       envelopes: {},
+      fragments: {},
     }
   }
   if (!isObject(doc)) {
     return fail('Contract root must be a mapping', filePath)
   }
-  checkKeys(doc, ['imports', 'defaults', 'header', 'project', 'generators', 'enums', 'models', 'operations', 'apis', 'tasks', 'events', 'firestore', 'unions', 'envelopes'], filePath, '(root)')
+  checkKeys(doc, ['imports', 'defaults', 'header', 'project', 'generators', 'enums', 'models', 'operations', 'apis', 'tasks', 'events', 'firestore', 'unions', 'envelopes', 'fragments'], filePath, '(root)')
 
   const imports: string[] = []
   if (doc.imports !== undefined) {
@@ -823,6 +844,16 @@ const parseContractInner = (content: string, filePath: string): RawContract => {
     }
   }
 
+  const fragments: Record<string, RawFragment> = {}
+  if (doc.fragments !== undefined) {
+    if (!isObject(doc.fragments)) {
+      return fail('"fragments" must be a mapping', filePath, 'fragments')
+    }
+    for (const [name, raw] of Object.entries(doc.fragments)) {
+      fragments[name] = normalizeFragment(raw, filePath, name)
+    }
+  }
+
   const contract: RawContract = {
     filePath,
     imports,
@@ -834,6 +865,7 @@ const parseContractInner = (content: string, filePath: string): RawContract => {
     firestore,
     unions,
     envelopes,
+    fragments,
   }
   if (doc.project !== undefined) {
     contract.project = normalizeProject(doc.project, filePath)

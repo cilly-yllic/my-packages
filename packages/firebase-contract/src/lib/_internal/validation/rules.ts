@@ -352,7 +352,7 @@ const RESERVED_OWNER = 'the generated runtime'
  * - zod schemas module: logical names and their `…Schema` companions
  * - unions module: union names/schemas plus the variant schemas it imports
  * - firestore module: doc names, co-located enums/embedded models under
- *   `fsName ?? name`, plus the `_Meta_…` / `FIRESTORE_DATABASES` runtime
+ *   `fsName ?? name`, plus the `FIRESTORE_DATABASES` runtime
  *
  * GraphQL names are checked separately ({@link graphqlNameCollisions}) because
  * that namespace is scoped per data-connect-graphql declaration, not global.
@@ -421,7 +421,7 @@ export const nameCollisions: ValidationRule = ir => {
   // firestore module: doc schemas + co-located enums/embedded models under fsName-effective names.
   // Tables are imported as `Dc…Schema` aliases, so they don't claim names here.
   check('firestore', [
-    ...['_Meta_', '_Meta_Schema', '_Meta_Operation', '_Meta_OperationSchema', 'FIRESTORE_DATABASES', 'FirestoreDatabaseKey', 'FirestoreDatabaseId'].map(
+    ...['FIRESTORE_DATABASES', 'FirestoreDatabaseKey', 'FirestoreDatabaseId'].map(
       identifier => ({ owner: RESERVED_OWNER, identifier, path: '(generated)' })
     ),
     ...ir.firestore.flatMap(d =>

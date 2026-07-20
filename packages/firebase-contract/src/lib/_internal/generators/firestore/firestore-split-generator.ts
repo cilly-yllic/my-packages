@@ -1,4 +1,4 @@
-import { findEnum, findModel, Ir, IrEnum, IrField, IrFirestoreDoc, IrModel, ScalarType } from '../../ir/ir.js'
+import { findEnum, findFragment, findModel, Ir, IrEnum, IrField, IrFirestoreDoc, IrModel, ScalarType } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { zodConstraints } from '../support/constraints.js'
 import { headerBlocks } from '../support/header.js'
@@ -6,6 +6,16 @@ import { camelCase, constantCase, pluralize, singleQuote } from '../support/nami
 import { isRelation, relationFkName } from '../support/relations.js'
 import { collectDeps, kebabCase, tableNameOf } from '../support/split.js'
 import { outputFile } from '../support/templates.js'
+
+/** Fields spliced into a projection by its `extends` fragments (in declared order). */
+const fragmentFieldsOf = (ir: Ir, doc: IrFirestoreDoc): IrField[] =>
+  doc.extends.flatMap(name => findFragment(ir, name)?.fields ?? [])
+
+/** True for a placement-pinned value object (emitted at its own `out`, not co-located). */
+const isPinnedModel = (ir: Ir, name: string): boolean => findModel(ir, name)?.out !== undefined
+
+/** Import path (dir barrel) from a `firestore/<name>.ts` doc to a pinned model's `out` dir. */
+const pinnedImportPath = (out: string): string => `./${out.startsWith('firestore/') ? out.slice('firestore/'.length) : out}`
 
 // Projection-level scalars: timestamps become dates, ids/relations become
 // resolved (hashids-encoded) string ids.
@@ -27,37 +37,6 @@ const SCALAR_EMBEDDED: Record<ScalarType, string> = {
   int: 'z.number().int()',
   int64: 'z.number().int()',
 }
-
-const META_FILE = `import { z } from 'zod'
-
-/**
- * Cloud Task 整合性管理用の operation 識別子メタ。
- * 整合性回復 (reconciliation) 処理の最新世代を表す。
- */
-export const _Meta_OperationSchema = z.object({
-  /** opId (operation id) */
-  id: z.string(),
-  /** 整合性回復処理の識別子 */
-  identifierId: z.string(),
-  /** unixtime (最終更新) */
-  updatedAt: z.number(),
-})
-export type _Meta_Operation = z.infer<typeof _Meta_OperationSchema>
-
-/**
- * 全 Firestore document に付ける整合性管理メタ。
- *
- * - \`scope\`: app hosting 経由で set される unixtime
- * - \`sys\`:   cloud functions / cloud task 経由で set される unixtime
- * - \`op\`:    cloud task で set される operation メタ
- */
-export const _Meta_Schema = z.object({
-  scope: z.number().nullable(),
-  sys: z.number().nullable(),
-  op: _Meta_OperationSchema.nullable(),
-})
-export type _Meta_ = z.infer<typeof _Meta_Schema>
-`
 
 const lineComments = (description: string | undefined, indent: string): string[] =>
   description ? description.split('\n').map(line => `${indent}// ${line}`.trimEnd()) : []
@@ -221,7 +200,7 @@ const effectiveFields = (ir: Ir, doc: IrFirestoreDoc): { rendered: RenderedField
     entries.set(name, { comments: [], entry: `  ${name}: ${schema},`, name, pickable })
     roots.push(field)
   }
-  for (const field of doc.fields) {
+  for (const field of [...doc.fields, ...fragmentFieldsOf(ir, doc)]) {
     const { name, schema } = overrideFieldSchema(ir, field)
     const comments = field.jsdoc ? jsdoc(field.description, '  ') : lineComments(field.description, '  ')
     entries.set(name, { comments, entry: `  ${name}: ${schema},`, name, pickable: false })
@@ -256,7 +235,9 @@ export const createFirestoreSplitLayout = (): Generator => ({
       const pseudo: IrModel = { name: `__${doc.name}`, fields: roots, key: [], indexes: [] }
       const collected = collectDeps(ir, [pseudo])
       const included = (doc.include ?? []).filter(name => !collected.models.includes(name))
-      const deps = { enums: collected.enums, models: [...included, ...collected.models] }
+      // Pinned value objects are emitted at their own `out`, never co-located.
+      const models = [...included, ...collected.models].filter(name => !isPinnedModel(ir, name))
+      const deps = { enums: collected.enums, models }
       docDeps.set(doc.name, deps)
       const moduleName = docModuleName(doc)
       for (const name of deps.enums) if (!enumHome.has(name)) enumHome.set(name, moduleName)
@@ -290,7 +271,22 @@ export const createFirestoreSplitLayout = (): Generator => ({
       const importLines = [...external.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([home, symbols]) => `import { ${[...symbols].sort().join(', ')} } from './${home}'`)
-      if (doc.meta) importLines.unshift(`import { _Meta_Schema } from './_'`)
+      // Pinned value objects directly referenced by this doc: imported from their out-dir barrel.
+      const { roots } = effectiveFields(ir, doc)
+      const pinnedImports = new Map<string, Set<string>>()
+      for (const field of roots) {
+        if (field.type.kind === 'model' && isPinnedModel(ir, field.type.name)) {
+          const model = findModel(ir, field.type.name)
+          if (!model?.out) continue
+          const from = pinnedImportPath(model.out)
+          const set = pinnedImports.get(from) ?? new Set<string>()
+          set.add(`${fsModelName(ir, field.type.name)}Schema`)
+          pinnedImports.set(from, set)
+        }
+      }
+      for (const [from, symbols] of [...pinnedImports.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+        importLines.unshift(`import { ${[...symbols].sort().join(', ')} } from '${from}'`)
+      }
       // Fields whose Zod chain is identical to the Data Connect schema are
       // picked from it (single definition); only representation changes extend.
       const baseModel = doc.from ? findModel(ir, doc.from) : undefined
@@ -329,7 +325,6 @@ export const createFirestoreSplitLayout = (): Generator => ({
           lines.push(...field.comments)
           lines.push(field.entry)
         }
-        if (doc.meta) lines.push('  _meta_: _Meta_Schema,')
         lines.push('})')
       } else {
         lines.push(`export const ${doc.name}Schema = z.object({`)
@@ -337,7 +332,6 @@ export const createFirestoreSplitLayout = (): Generator => ({
           lines.push(...field.comments)
           lines.push(field.entry)
         }
-        if (doc.meta) lines.push('  _meta_: _Meta_Schema,')
         lines.push('})')
       }
       lines.push(`export type ${doc.name} = z.infer<typeof ${doc.name}Schema>`)
@@ -346,9 +340,38 @@ export const createFirestoreSplitLayout = (): Generator => ({
       files.push({ path: `firestore/${moduleName}.ts`, content: `${blocks.join('\n\n')}\n` })
     }
 
-    if (ir.firestore.some(doc => doc.meta)) {
-      files.push({ path: 'firestore/_/_meta_.ts', content: META_FILE })
-      files.push({ path: 'firestore/_/index.ts', content: `export * from './_meta_'\n` })
+    // Pinned value objects: emitted at their own `out` (grouped per out+file),
+    // dependencies first, with an index barrel. These replace the former
+    // hardcoded `_meta_` envelope — the shape now lives entirely in the contract.
+    const pinDirs: string[] = []
+    const pinGroups = new Map<string, { out: string; file: string; models: IrModel[] }>()
+    for (const model of ir.models) {
+      if (model.out === undefined) continue
+      const file = model.file ?? 'index.ts'
+      const key = `${model.out} ${file}`
+      const group = pinGroups.get(key) ?? { out: model.out, file, models: [] }
+      group.models.push(model)
+      pinGroups.set(key, group)
+    }
+    for (const { out, file, models } of pinGroups.values()) {
+      // Order so a referenced value object is declared before its referrer (same file).
+      const ordered: IrModel[] = []
+      const placed = new Set<string>()
+      const place = (m: IrModel): void => {
+        if (placed.has(m.name)) return
+        placed.add(m.name)
+        for (const dep of collectDeps(ir, [m]).models) {
+          const depModel = models.find(x => x.name === dep)
+          if (depModel) place(depModel)
+        }
+        ordered.push(m)
+      }
+      for (const m of models) place(m)
+      const body = ['import { z }' + " from 'zod'", ...ordered.map(m => renderEmbeddedModel(ir, m))].join('\n\n')
+      const base = file.replace(/\.ts$/, '')
+      files.push({ path: `${out}/${file}`, content: `${body}\n` })
+      files.push({ path: `${out}/index.ts`, content: `export * from './${base}'\n` })
+      pinDirs.push(out)
     }
 
     // Barrel: database name constants (when the project defines services) + re-exports.
@@ -368,7 +391,7 @@ export const createFirestoreSplitLayout = (): Generator => ({
       )
     }
     const exportLines = ir.firestore.map(doc => `export * from './firestore/${docModuleName(doc)}'`)
-    if (ir.firestore.some(doc => doc.meta)) exportLines.push(`export * from './firestore/_'`)
+    for (const out of pinDirs) exportLines.push(`export * from './${out}'`)
     barrel.push(['// Zod schema / TypeScript 型のエクスポート', ...exportLines].join('\n'))
     files.push({ path: outputFile(context, 'firestore.ts'), content: `${barrel.join('\n\n')}\n` })
     return files

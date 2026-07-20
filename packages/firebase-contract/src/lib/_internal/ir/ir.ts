@@ -114,6 +114,10 @@ export interface IrModel {
   fsName?: string
   /** Composite unique/index constraints (Data Connect `@unique`/`@index`). */
   indexes: IrIndex[]
+  /** Placement-pinned split output dir (relative to the generator `out`); firestore-scoped value object. */
+  out?: string
+  /** File name for a placement-pinned value object. */
+  file?: string
   /** Absolute path of the file this model was defined in. */
   sourceFile?: string
 }
@@ -323,8 +327,9 @@ export interface IrEnvelope {
  * A Firestore projection document. Firestore is a denormalized read model, so a
  * projection *derives* from a Data Connect model (`from`) and then diverges:
  * fields are picked/omitted, relations become resolved string ids, timestamps
- * become dates, a `_meta_` envelope is added, and extra denormalized fields
- * (e.g. flattened DAG edges) are declared inline.
+ * become dates, fragments (e.g. a shared `_meta_` envelope) are spliced in via
+ * `extends`, and extra denormalized fields (e.g. flattened DAG edges) are
+ * declared inline.
  */
 export interface IrFirestoreDoc {
   name: string
@@ -339,12 +344,20 @@ export interface IrFirestoreDoc {
   omit: string[]
   /** Added or overriding projection-specific fields. */
   fields: IrField[]
-  /** Attach the consistency `_meta_` envelope (default true). */
-  meta: boolean
+  /** Fragment names whose fields are appended to this projection. */
+  extends: string[]
   /** Embedded models to host in this projection file even when unreferenced. */
   include?: string[]
   /** Verbatim TypeScript helpers emitted into the projection file. */
   helpers?: string
+  sourceFile?: string
+}
+
+/** A reusable named group of fields, spliced into consumers via `extends`. */
+export interface IrFragment {
+  name: string
+  description?: string
+  fields: IrField[]
   sourceFile?: string
 }
 
@@ -382,6 +395,7 @@ export interface Ir {
   firestore: IrFirestoreDoc[]
   unions: IrUnion[]
   envelopes: IrEnvelope[]
+  fragments: IrFragment[]
   project?: IrProject
   /** Raw header text from the contract (`default` = built-in banner). */
   header?: string
@@ -392,6 +406,9 @@ export const findModel = (ir: Ir, name: string): IrModel | undefined =>
 
 export const findEnum = (ir: Ir, name: string): IrEnum | undefined =>
   ir.enums.find(irEnum => irEnum.name === name)
+
+export const findFragment = (ir: Ir, name: string): IrFragment | undefined =>
+  ir.fragments.find(fragment => fragment.name === name)
 
 /** The id field's scalar name of a model, used to type foreign keys. Defaults to `string`. */
 export const idTypeOf = (ir: Ir, modelName: string): ScalarType => {

@@ -25,6 +25,7 @@ const ir = (partial: Partial<Ir>): Ir => ({
   firestore: [],
   unions: [],
   envelopes: [],
+  fragments: [],
   ...partial,
 })
 
@@ -215,7 +216,7 @@ describe('validateIr', () => {
         ir({
           models: [model('Attachment', [field('url')])], // no id → embedded value object
           firestore: [
-            { name: 'Attachment', from: undefined, collection: 'x/{id}', pick: [], omit: [], fields: [field('a')], meta: false },
+            { name: 'Attachment', from: undefined, collection: 'x/{id}', pick: [], omit: [], fields: [field('a')], extends: [] },
           ],
         })
       )
@@ -251,7 +252,7 @@ describe('validateIr', () => {
       const found = codes(
         ir({
           models: [model('Task', [idField()])],
-          firestore: [{ name: 'Task', from: 'Task', collection: 'tasks/{id}', pick: [], omit: [], fields: [], meta: true }],
+          firestore: [{ name: 'Task', from: 'Task', collection: 'tasks/{id}', pick: [], omit: [], fields: [], extends: [] }],
         })
       )
       expect(found).not.toContain('NAME_COLLISION')

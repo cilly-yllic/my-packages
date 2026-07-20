@@ -31,8 +31,10 @@ export const createTypeScriptGenerator = (options: TypeScriptGeneratorOptions = 
   description: 'TypeScript interfaces and enum const/union types',
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[] {
     const blocks: string[] = [...headerBlocks(context)]
+    // Pinned value objects (models with `out`) are firestore-scoped: excluded here.
+    const models = ir.models.filter(model => model.out === undefined)
 
-    if (usesJson(ir.models)) {
+    if (usesJson(models)) {
       blocks.push(JSON_TYPE)
     }
 
@@ -40,7 +42,7 @@ export const createTypeScriptGenerator = (options: TypeScriptGeneratorOptions = 
       blocks.push(enumStyle === 'const' ? renderEnumConst(irEnum) : renderEnumUnion(irEnum))
     }
 
-    for (const model of ir.models) {
+    for (const model of models) {
       blocks.push(renderModel(model, ir))
     }
 

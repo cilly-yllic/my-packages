@@ -53,7 +53,7 @@ generators:
 `,
       '/proj/a-schema.yml': `
 models:
-  ReconOp:
+  Order:
     fields:
       id: { type: id, id: true }
 `,
@@ -61,8 +61,8 @@ models:
 generators:
   - { generator: data-connect-graphql, out: src }
 models:
-  T2ReconOp:
-    gqlName: ReconOp
+  LegacyOrder:
+    gqlName: Order
     fields:
       id: { type: id, id: true }
 `,

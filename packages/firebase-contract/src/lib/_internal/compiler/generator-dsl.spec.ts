@@ -23,13 +23,13 @@ generators:
   - generator: task-payloads
     out: src/generated
 envelopes:
-  ReconTaskPayload:
+  SyncTaskPayload:
     fields:
       identifierId: string
       opId: string
 apis:
-  /ai-models/{model-id}:
-    operationId: updateAiModel
+  /gadgets/{gadget-id}:
+    operationId: updateGadget
     method: PUT
     generators:
       - api-dto
@@ -39,8 +39,8 @@ apis:
         displayName: string
     response:
       void: true
-  /ai-providers:
-    operationId: createAiProvider
+  /vendors:
+    operationId: createVendor
     method: POST
     request:
       fields:
@@ -51,7 +51,7 @@ tasks:
   defaults:
     generators: [task-payloads]
   createUser:
-    envelope: ReconTaskPayload
+    envelope: SyncTaskPayload
     maxAttempts: 3
     request:
       fields:
@@ -72,18 +72,18 @@ describe('generator declaration/application DSL', () => {
     expect(result.ok).toBe(true)
     const paths = result.targets.flatMap(t => t.files.map(f => f.path))
 
-    // updateAiModel opted into api-dto → emitted; createAiProvider did not → absent
+    // updateGadget opted into api-dto → emitted; createVendor did not → absent
     const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('.dto.ts')))
     expect(dto?.outDir).toBe('/proj/svc/src/generated')
     // 1 api = 1 file, named after the operation (NestJS convention)
-    expect(dto?.files.map(f => f.path)).toEqual(['/proj/svc/src/generated/update-ai-model.dto.ts'])
+    expect(dto?.files.map(f => f.path)).toEqual(['/proj/svc/src/generated/update-gadget.dto.ts'])
     const dtoContent = dto?.files[0]?.content ?? ''
-    expect(dtoContent).toContain('UpdateAiModel')
-    expect(dtoContent).not.toContain('CreateAiProvider')
+    expect(dtoContent).toContain('UpdateGadget')
+    expect(dtoContent).not.toContain('CreateVendor')
 
     // alias + {api-name} placeholder resolves relative to the root yml, per api
-    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
-    expect(paths.some(p => p.includes('create-ai-provider'))).toBe(false)
+    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-gadget/api-types.ts')
+    expect(paths.some(p => p.includes('create-vendor'))).toBe(false)
   })
 
   it('applies section defaults when an entry declares no generators', () => {
@@ -133,7 +133,7 @@ describe('generator declaration/application DSL', () => {
     expect(result.ok).toBe(true)
     // {path} drops the `{model-id}` param segment
     const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('.dto.ts')))
-    expect(dto?.outDir).toBe('/proj/svc/src/entries/ai-models')
+    expect(dto?.outDir).toBe('/proj/svc/src/entries/gadgets')
   })
 })
 
@@ -295,8 +295,8 @@ models:
 describe('parser: sections and declarations', () => {
   it('parses tasks/events into kind-implied apis and rejects duplicates', () => {
     const contract = parseContract(SERVICE, '/svc.yml')
-    expect(contract.apis.updateAiModel?.kind).toBe('https')
-    expect(contract.apis.updateAiModel?.path).toBe('/ai-models/{model-id}')
+    expect(contract.apis.updateGadget?.kind).toBe('https')
+    expect(contract.apis.updateGadget?.path).toBe('/gadgets/{gadget-id}')
     expect(contract.apis.createUser?.kind).toBe('task')
     expect(contract.sectionDefaults?.tasks).toEqual([{ generator: 'task-payloads' }])
     expect(contract.generatorDecls).toEqual([
@@ -308,20 +308,20 @@ describe('parser: sections and declarations', () => {
   it('allows the same route once per verb via METHOD-prefixed keys', () => {
     const yml = [
       'apis:',
-      '  PUT /ai-models/{model-id}:',
-      '    operationId: updateAiModel',
+      '  PUT /gadgets/{gadget-id}:',
+      '    operationId: updateGadget',
       '    request: {}',
       '    response: {}',
-      '  DELETE /ai-models/{model-id}:',
-      '    operationId: deleteAiModel',
+      '  DELETE /gadgets/{gadget-id}:',
+      '    operationId: deleteGadget',
       '    request: {}',
       '    response: {}',
       '',
     ].join('\n')
     const contract = parseContract(yml, '/c.yml')
-    expect(contract.apis.updateAiModel?.method).toBe('PUT')
-    expect(contract.apis.updateAiModel?.path).toBe('/ai-models/{model-id}')
-    expect(contract.apis.deleteAiModel?.method).toBe('DELETE')
+    expect(contract.apis.updateGadget?.method).toBe('PUT')
+    expect(contract.apis.updateGadget?.path).toBe('/gadgets/{gadget-id}')
+    expect(contract.apis.deleteGadget?.method).toBe('DELETE')
   })
 
   it('rejects a method field conflicting with the METHOD-prefixed key', () => {
@@ -364,7 +364,7 @@ describe('declarative output settings (file / split / options)', () => {
     })
     expect(result.ok).toBe(true)
     const paths = result.targets.flatMap(t => t.files.map(f => f.path))
-    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-ai-model.types.ts')
+    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-gadget.types.ts')
   })
 
   it('bundles a split-by-default generator when split is false with a plain file name', () => {
@@ -378,7 +378,7 @@ describe('declarative output settings (file / split / options)', () => {
     expect(result.ok).toBe(true)
     const dto = result.targets.find(t => t.files.some(f => f.path.endsWith('dtos.ts')))
     expect(dto?.files.map(f => f.path)).toEqual(['/proj/svc/src/generated/dtos.ts'])
-    expect(dto?.files[0]?.content).toContain('UpdateAiModelDto')
+    expect(dto?.files[0]?.content).toContain('UpdateGadgetDto')
   })
 
   it('derives typesImport from the typescript declaration when not set', () => {
@@ -396,17 +396,17 @@ imports:
 `
     const service = `
 apis:
-  /ai-models/{model-id}:
-    operationId: updateAiModel
+  /gadgets/{gadget-id}:
+    operationId: updateGadget
     method: PUT
     generators:
       - api-types
     request:
-      model: AiModel
+      model: Gadget
     response:
       void: true
 models:
-  AiModel:
+  Gadget:
     fields:
       id: { type: id, id: true }
       displayName: string
@@ -434,17 +434,17 @@ imports:
 `
     const service = `
 apis:
-  /ai-models/{model-id}:
-    operationId: updateAiModel
+  /gadgets/{gadget-id}:
+    operationId: updateGadget
     method: PUT
     generators:
       - api-types
     request:
-      model: AiModel
+      model: Gadget
     response:
       void: true
 models:
-  AiModel:
+  Gadget:
     fields:
       id: { type: id, id: true }
       displayName: string
@@ -463,10 +463,10 @@ models:
       fields:
         displayName: string`,
       `    request:
-      model: AiModel`
+      model: Gadget`
     ) + `
 models:
-  AiModel:
+  Gadget:
     fields:
       displayName: string
 `
@@ -476,7 +476,7 @@ models:
     expect(result.ok).toBe(true)
     const types = result.targets
       .flatMap(t => t.files)
-      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
+      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-gadget/api-types.ts')
     expect(types?.content).toContain("from './types'")
   })
 
@@ -494,10 +494,10 @@ models:
       fields:
         displayName: string`,
       `    request:
-      model: AiModel`
+      model: Gadget`
     ) + `
 models:
-  AiModel:
+  Gadget:
     fields:
       displayName: string
 `
@@ -507,7 +507,7 @@ models:
     expect(result.ok).toBe(true)
     const types = result.targets
       .flatMap(t => t.files)
-      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
+      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-gadget/api-types.ts')
     expect(types?.content).toContain("from '../../types'")
   })
 
@@ -605,9 +605,9 @@ models:
     })
     expect(result.ok).toBe(true)
     const files = result.targets.flatMap(t => t.files)
-    const types = files.find(f => f.path === '/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
+    const types = files.find(f => f.path === '/proj/libs/contracts/src/api-types/update-gadget/api-types.ts')
     expect(types?.content).toContain('AUTO-GENERATED by firebase-contract')
-    const dto = files.find(f => f.path.endsWith('update-ai-model.dto.ts'))
+    const dto = files.find(f => f.path.endsWith('update-gadget.dto.ts'))
     expect(dto?.content).toContain('// Managed by fbc — do not edit')
     // task-payloads declared without header → no banner
     const payloads = files.find(f => f.path.endsWith('task-payloads.ts'))
@@ -625,7 +625,7 @@ models:
     })
     expect(result.ok).toBe(true)
     const files = result.targets.flatMap(t => t.files)
-    const dto = files.find(f => f.path.endsWith('update-ai-model.dto.ts'))
+    const dto = files.find(f => f.path.endsWith('update-gadget.dto.ts'))
     expect(dto?.content).not.toContain('GLOBAL')
     // generators without their own header keep the run-level one
     const payloads = files.find(f => f.path.endsWith('task-payloads.ts'))
@@ -649,7 +649,7 @@ models:
     })
     expect(result.ok).toBe(true)
     const paths = result.targets.flatMap(t => t.files.map(f => f.path))
-    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-ai-model.types.ts')
+    expect(paths).toContain('/proj/libs/contracts/src/api-types/update-gadget.types.ts')
     expect(paths).not.toContain('/proj/libs/contracts/src/api-types/bundled.ts')
   })
 })

@@ -381,6 +381,105 @@ describe('declarative output settings (file / split / options)', () => {
     expect(dto?.files[0]?.content).toContain('UpdateAiModelDto')
   })
 
+  it('derives typesImport from the typescript declaration when not set', () => {
+    const root = `
+project:
+  aliases:
+    "#contracts/*": libs/contracts/src/*
+generators:
+  - { generator: typescript, out: "#contracts", split: true }
+  - generator: api-types
+    out: "#contracts/api-types"
+    file: svc.ts
+imports:
+  - ./svc/contract.yml
+`
+    const service = `
+apis:
+  /ai-models/{model-id}:
+    operationId: updateAiModel
+    method: PUT
+    generators:
+      - api-types
+    request:
+      model: AiModel
+    response:
+      void: true
+models:
+  AiModel:
+    fields:
+      id: { type: id, id: true }
+      displayName: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/svc/contract.yml': service }),
+    })
+    expect(result.ok).toBe(true)
+    const types = result.targets.flatMap(t => t.files).find(f => f.path === '/proj/libs/contracts/src/api-types/svc.ts')
+    expect(types?.content).toContain("from '../types'")
+  })
+
+  it('follows a renamed typescript barrel when deriving typesImport', () => {
+    const root = `
+project:
+  aliases:
+    "#contracts/*": libs/contracts/src/*
+generators:
+  - { generator: typescript, out: "#contracts", file: models.ts, split: true }
+  - generator: api-types
+    out: "#contracts/api-types"
+    file: svc.ts
+imports:
+  - ./svc/contract.yml
+`
+    const service = `
+apis:
+  /ai-models/{model-id}:
+    operationId: updateAiModel
+    method: PUT
+    generators:
+      - api-types
+    request:
+      model: AiModel
+    response:
+      void: true
+models:
+  AiModel:
+    fields:
+      id: { type: id, id: true }
+      displayName: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': root, '/proj/svc/contract.yml': service }),
+    })
+    expect(result.ok).toBe(true)
+    const types = result.targets.flatMap(t => t.files).find(f => f.path === '/proj/libs/contracts/src/api-types/svc.ts')
+    expect(types?.content).toContain("from '../models'")
+  })
+
+  it('keeps the built-in typesImport default without a typescript declaration', () => {
+    const service = SERVICE.replace(
+      `    request:
+      fields:
+        displayName: string`,
+      `    request:
+      model: AiModel`
+    ) + `
+models:
+  AiModel:
+    fields:
+      displayName: string
+`
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({ '/proj/contract.yml': ROOT, '/proj/svc/contract.yml': service }),
+    })
+    expect(result.ok).toBe(true)
+    const types = result.targets
+      .flatMap(t => t.files)
+      .find(f => f.path === '/proj/libs/contracts/src/api-types/update-ai-model/api-types.ts')
+    expect(types?.content).toContain("from './types'")
+  })
+
   it('honors options.typesImport for the api-types import path', () => {
     const root = ROOT.replace(
       `  - generator: api-types

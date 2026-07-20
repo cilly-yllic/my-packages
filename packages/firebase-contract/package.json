@@ -1,6 +1,6 @@
 {
   "name": "firebase-contract",
-  "version": "0.1.0-rc.11",
+  "version": "0.1.0-rc.12",
   "type": "module",
   "bin": {
     "firebase-contract": "./dist/lib/cli/index.js",

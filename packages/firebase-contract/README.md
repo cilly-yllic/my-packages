@@ -34,6 +34,7 @@ fbc init          # scaffold contract.yml + firebase-contract.json
 fbc validate      # parse, resolve imports, semantically validate
 fbc generate      # run every generator declared across the contract graph
 fbc inspect       # print the normalized IR (debugging)
+fbc where <Name>  # locate the yml defining a type (logical / gqlName / fsName / table)
 ```
 
 ### One-command generation
@@ -103,7 +104,13 @@ generators:
   and errors for generators without one.
 - **`options`** — free-form string map passed through to the generator.
   Currently: `typesImport` (api-types, task-payloads, data-connect-operations)
-  overrides the `./types` import path.
+  overrides the types import path. For api-types and task-payloads this is
+  normally unnecessary: when the option is absent and a `typescript` generator
+  is declared (nearest-first: same yml → root), the import specifier is derived
+  automatically as the relative path from the output file to the declared
+  barrel — moving or renaming the barrel (`out` / `file`) re-derives it. An
+  explicit `typesImport` always wins; without a typescript declaration the
+  generator's built-in default (`./types`) applies.
 - **`header`** — per-generator banner override: `default` for the built-in
   AUTO-GENERATED banner, any text for a custom comment, `""` to suppress the
   banner for this generator. Wins over the contract-level `header:` and the
@@ -173,6 +180,18 @@ A contract is composed of top-level sections — `enums`, `models`, `operations`
 in other contracts (relative paths or npm packages). Imports are resolved
 transitively with cycle/duplicate detection and diamond dedup, so you can split
 a large contract across files that mirror your repo layout.
+
+**Type names are globally unique.** The namespace is flat across the whole
+import graph: defining the same name twice — same kind (`DUPLICATE_DEFINITION`)
+or across kinds/derived identifiers, e.g. an enum and a model both named
+`Status`, or two enums whose `CONSTANT_CASE` consts collide (`NAME_COLLISION`)
+— aborts generation. Uniqueness is enforced per output namespace with its
+*effective* names, so `fsName`/`gqlName` renames legitimately reuse a name in a
+different output: GraphQL names are checked per `data-connect-graphql` scope
+(services may map distinct logical names onto the same gqlName), and the
+firestore module is checked under `fsName ?? name` alongside doc names. A bare
+type reference therefore always resolves to exactly one definition — use
+`fbc where <Name>` to find it.
 
 ```yaml
 version: 1

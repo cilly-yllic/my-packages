@@ -18,7 +18,6 @@ const field = (name: string, overrides: Partial<IrField> = {}): IrField => ({
 })
 
 const ir = (partial: Partial<Ir>): Ir => ({
-  version: 1,
   enums: [],
   models: [],
   operations: [],

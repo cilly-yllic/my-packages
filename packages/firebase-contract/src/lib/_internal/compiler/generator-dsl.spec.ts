@@ -110,7 +110,7 @@ describe('generator declaration/application DSL', () => {
   })
 
   it('reports an error for an alias with no project.aliases match', () => {
-    const rootWithoutAlias = ROOT.replace('project:', 'ignored:').replace('  aliases:', '  aliasesX:').replace('    "#contracts/*": libs/contracts/src/*', '    x: y')
+    const rootWithoutAlias = ROOT.replace('"#contracts/*": libs/contracts/src/*', '"#other/*": libs/other/src/*')
     const result = generateAll('/proj/contract.yml', {
       loader: createMemoryLoader({ '/proj/contract.yml': rootWithoutAlias, '/proj/svc/contract.yml': SERVICE }),
     })

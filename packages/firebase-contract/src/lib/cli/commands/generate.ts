@@ -41,9 +41,8 @@ export const registerGenerate = (program: Command): void => {
     .action((entryArg: string | undefined, flags: GenerateFlags) => {
       const config = loadConfig()
       const entry = entryArg ?? config.entry ?? 'contract.yml'
-      const outDir = flags.outDir ?? config.outDir ?? 'generated'
-      const generators =
-        flags.generators?.split(',').map(name => name.trim()).filter(Boolean) ?? config.generators
+      const outDir = flags.outDir ?? 'generated'
+      const generators = flags.generators?.split(',').map(name => name.trim()).filter(Boolean)
 
       const header =
         flags.header === true ? DEFAULT_HEADER : typeof flags.header === 'string' ? toHeaderComment(flags.header) : undefined
@@ -51,8 +50,10 @@ export const registerGenerate = (program: Command): void => {
       const context = header !== undefined ? { header } : undefined
 
       // Without -o/-g, run every generator declared in the contract
-      // graph — the one-command flow. Flags switch back to single-target mode.
-      const explicit = flags.outDir !== undefined || flags.generators !== undefined || config.outDir !== undefined || config.generators !== undefined
+      // graph — the one-command flow. Only explicit flags switch back to
+      // single-target mode; the config file cannot (it must never silently
+      // disable the contract's own generators: declarations).
+      const explicit = flags.outDir !== undefined || flags.generators !== undefined
       if (!explicit) {
         const all = generateAll(entry, { registry, write: !flags.check, ...(context ? { context } : {}) })
         if (all.targets.length > 0 || !all.ok) {

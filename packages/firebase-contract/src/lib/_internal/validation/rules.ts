@@ -1,4 +1,6 @@
 import { Diagnostic, error, warning } from '../diagnostics.js'
+import { constantCase } from '../generators/support/naming.js'
+import { isTable } from '../generators/support/split.js'
 import { findModel, Ir, IrApiPayload } from '../ir/ir.js'
 
 /**
@@ -327,6 +329,149 @@ export const unions: ValidationRule = ir =>
     return diagnostics
   })
 
+/** A single generated identifier claimed by a definition within one output namespace. */
+interface NameClaim {
+  /** Human-readable owner, e.g. `model "Task"` — claims by the same owner never collide. */
+  owner: string
+  identifier: string
+  file?: string
+  path: string
+}
+
+const RESERVED_OWNER = 'the generated runtime'
+
+/**
+ * Type names must be unique within every output namespace — the export surface
+ * where generated identifiers converge (a split layout still merges into one
+ * barrel, so physical files are irrelevant). Renames (`gqlName` / `fsName`)
+ * deliberately move a type between namespaces, so each namespace is checked
+ * independently against its *effective* names:
+ *
+ * - TypeScript types module: model/enum/union logical names, enum const
+ *   (`CONSTANT_CASE`) and `…Key` companions, plus the reserved `Json` type
+ * - zod schemas module: logical names and their `…Schema` companions
+ * - unions module: union names/schemas plus the variant schemas it imports
+ * - firestore module: doc names, co-located enums/embedded models under
+ *   `fsName ?? name`, plus the `_Meta_…` / `FIRESTORE_DATABASES` runtime
+ *
+ * GraphQL names are checked separately ({@link graphqlNameCollisions}) because
+ * that namespace is scoped per data-connect-graphql declaration, not global.
+ *
+ * Same-kind duplicates are already DUPLICATE_DEFINITION at merge time; this
+ * rule closes every cross-kind and derived-identifier hole. Each colliding
+ * definition pair is reported once (the first namespace that trips).
+ */
+export const nameCollisions: ValidationRule = ir => {
+  const diagnostics: Diagnostic[] = []
+  const reportedPairs = new Set<string>()
+
+  const check = (space: string, claims: NameClaim[]): void => {
+    const first = new Map<string, NameClaim>()
+    for (const claim of claims) {
+      const prev = first.get(claim.identifier)
+      if (!prev) {
+        first.set(claim.identifier, claim)
+        continue
+      }
+      if (prev.owner === claim.owner) continue
+      const pair = [prev.owner, claim.owner].sort().join(' vs ')
+      if (reportedPairs.has(pair)) continue
+      reportedPairs.add(pair)
+      diagnostics.push(
+        error('NAME_COLLISION', `${prev.owner} and ${claim.owner} both emit "${claim.identifier}" in the ${space} output`, {
+          file: claim.file ?? prev.file,
+          path: claim.path,
+        })
+      )
+    }
+  }
+
+  const claim = (owner: string, file: string | undefined, path: string, identifiers: string[]): NameClaim[] =>
+    identifiers.map(identifier => ({ owner, identifier, file, path }))
+
+  // TypeScript types module: the logical namespace every other output derives from.
+  check('TypeScript types', [
+    { owner: RESERVED_OWNER, identifier: 'Json', path: '(generated)' },
+    ...ir.models.flatMap(m => claim(`model "${m.name}"`, m.sourceFile, `models.${m.name}`, [m.name])),
+    ...ir.enums.flatMap(e =>
+      claim(`enum "${e.name}"`, e.sourceFile, `enums.${e.name}`, [e.name, `${e.name}Key`, constantCase(e.name)])
+    ),
+    ...ir.unions.flatMap(u => claim(`union "${u.name}"`, u.sourceFile, `unions.${u.name}`, [u.name])),
+  ])
+
+  // zod schemas module: logical names plus their `…Schema` consts.
+  check('zod schemas', [
+    ...ir.models.flatMap(m => claim(`model "${m.name}"`, m.sourceFile, `models.${m.name}`, [m.name, `${m.name}Schema`])),
+    ...ir.enums.flatMap(e => claim(`enum "${e.name}"`, e.sourceFile, `enums.${e.name}`, [e.name, `${e.name}Schema`])),
+  ])
+
+  // unions module: union declarations plus the variant schemas imported into it.
+  const variantOwners = new Map<string, string>()
+  for (const union of ir.unions) for (const variant of union.variants) variantOwners.set(variant, `model "${variant}"`)
+  check('unions', [
+    ...ir.unions.flatMap(u =>
+      claim(`union "${u.name}"`, u.sourceFile, `unions.${u.name}`, [u.name, `${u.name}Schema`])
+    ),
+    ...[...variantOwners.entries()].map(([variant, owner]) => {
+      const model = findModel(ir, variant)
+      return { owner, identifier: `${variant}Schema`, file: model?.sourceFile, path: `models.${variant}` }
+    }),
+  ])
+
+  // firestore module: doc schemas + co-located enums/embedded models under fsName-effective names.
+  // Tables are imported as `Dc…Schema` aliases, so they don't claim names here.
+  check('firestore', [
+    ...['_Meta_', '_Meta_Schema', '_Meta_Operation', '_Meta_OperationSchema', 'FIRESTORE_DATABASES', 'FirestoreDatabaseKey', 'FirestoreDatabaseId'].map(
+      identifier => ({ owner: RESERVED_OWNER, identifier, path: '(generated)' })
+    ),
+    ...ir.firestore.flatMap(d =>
+      claim(`firestore doc "${d.name}"`, d.sourceFile, `firestore.${d.name}`, [d.name, `${d.name}Schema`])
+    ),
+    ...ir.enums.flatMap(e => {
+      const fs = e.fsName ?? e.name
+      return claim(`enum "${e.name}"`, e.sourceFile, `enums.${e.name}`, [fs, `${fs}Key`, constantCase(fs), `${fs}Schema`])
+    }),
+    ...ir.models
+      .filter(m => !isTable(m))
+      .flatMap(m => {
+        const fs = m.fsName ?? m.name
+        return claim(`model "${m.name}"`, m.sourceFile, `models.${m.name}`, [fs, `${fs}Schema`])
+      }),
+  ])
+
+  return diagnostics
+}
+
+/**
+ * GraphQL name uniqueness under `gqlName ?? name`. Unlike {@link nameCollisions}
+ * this is NOT a default rule: a GraphQL schema exists per `data-connect-graphql`
+ * declaration, scoped to the declaring yml's import subtree — distinct services
+ * may intentionally reuse a gqlName (e.g. a `T2…` logical name mapped back to
+ * the plain name inside its own service). The compiler runs this check only
+ * when the entry document itself declares a GraphQL-emitting generator, i.e.
+ * exactly at the scope the schema is generated from.
+ */
+export const graphqlNameCollisions: ValidationRule = ir => {
+  const diagnostics: Diagnostic[] = []
+  const first = new Map<string, { owner: string; file?: string; path: string }>()
+  const claims = [
+    ...ir.models.map(m => ({ owner: `model "${m.name}"`, name: m.gqlName ?? m.name, file: m.sourceFile, path: `models.${m.name}` })),
+    ...ir.enums.map(e => ({ owner: `enum "${e.name}"`, name: e.gqlName ?? e.name, file: e.sourceFile, path: `enums.${e.name}` })),
+  ]
+  for (const { owner, name, file, path } of claims) {
+    const prev = first.get(name)
+    if (!prev) {
+      first.set(name, { owner, file, path })
+      continue
+    }
+    if (prev.owner === owner) continue
+    diagnostics.push(
+      error('NAME_COLLISION', `${prev.owner} and ${owner} both emit "${name}" in the GraphQL schema output`, { file: file ?? prev.file, path })
+    )
+  }
+  return diagnostics
+}
+
 export const DEFAULT_RULES: ValidationRule[] = [
   unresolvedTypes,
   emptyEnums,
@@ -339,4 +484,5 @@ export const DEFAULT_RULES: ValidationRule[] = [
   apis,
   firestore,
   unions,
+  nameCollisions,
 ]

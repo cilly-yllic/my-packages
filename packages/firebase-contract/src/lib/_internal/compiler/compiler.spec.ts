@@ -40,6 +40,54 @@ describe('compile', () => {
     })
     expect(diagnostics.some(d => d.code === 'UNRESOLVED_TYPE')).toBe(true)
   })
+
+  it('checks GraphQL name uniqueness only at a data-connect-graphql entry scope', () => {
+    // Two services deliberately reuse a gqlName; each service's schema is its own namespace.
+    const files = {
+      '/proj/contract.yml': `
+imports:
+  - ./a-schema.yml
+  - ./b-schema.yml
+generators:
+  - { generator: typescript, out: out }
+`,
+      '/proj/a-schema.yml': `
+models:
+  ReconOp:
+    fields:
+      id: { type: id, id: true }
+`,
+      '/proj/b-schema.yml': `
+generators:
+  - { generator: data-connect-graphql, out: src }
+models:
+  T2ReconOp:
+    gqlName: ReconOp
+    fields:
+      id: { type: id, id: true }
+`,
+    }
+    // Root entry: sees both services but declares no GraphQL output → no collision.
+    expect(compile('/proj/contract.yml', { loader: loaderOf(files) }).diagnostics).toEqual([])
+    // Within one GraphQL scope, a real collision must still be fatal.
+    const collided = compile('/proj/one-schema.yml', {
+      loader: loaderOf({
+        '/proj/one-schema.yml': `
+generators:
+  - { generator: data-connect-graphql, out: src }
+models:
+  TaskRow:
+    fields:
+      id: { type: id, id: true }
+  Task:
+    gqlName: TaskRow
+    fields:
+      id: { type: id, id: true }
+`,
+      }),
+    })
+    expect(collided.diagnostics.some(d => d.code === 'NAME_COLLISION')).toBe(true)
+  })
 })
 
 describe('generate', () => {

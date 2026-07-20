@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Ir, IrField, IrModel } from '../ir/ir.js'
 
+import { graphqlNameCollisions } from './rules.js'
 import { validateIr } from './validate.js'
 
 const field = (name: string, overrides: Partial<IrField> = {}): IrField => ({
@@ -117,6 +118,145 @@ describe('validateIr', () => {
         })
       )
     ).toContain('UNKNOWN_API_MODEL')
+  })
+
+  describe('nameCollisions', () => {
+    const idField = (): IrField => field('id', { type: { kind: 'scalar', name: 'id' }, isId: true })
+
+    it('flags a model and an enum sharing a name', () => {
+      const found = codes(
+        ir({
+          enums: [{ name: 'Status', values: ['a'] }],
+          models: [model('Status', [idField()])],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('reports a colliding pair only once across namespaces', () => {
+      const found = codes(
+        ir({
+          enums: [{ name: 'Status', values: ['a'] }],
+          models: [model('Status', [idField()])],
+        })
+      ).filter(code => code === 'NAME_COLLISION')
+      expect(found).toHaveLength(1)
+    })
+
+    it('flags two enums whose const names collide via constantCase', () => {
+      const found = codes(
+        ir({
+          enums: [
+            { name: 'TaskStatus', values: ['a'] },
+            { name: 'Task_Status', values: ['b'] },
+          ],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags a model colliding with an enum Key companion type', () => {
+      const found = codes(
+        ir({
+          enums: [{ name: 'Status', values: ['a'] }],
+          models: [model('StatusKey', [idField()])],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags an enum colliding with a model zod schema const', () => {
+      const found = codes(
+        ir({
+          enums: [{ name: 'TaskSchema', values: ['a'] }],
+          models: [model('Task', [idField()])],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags gqlName renames colliding in the GraphQL namespace (scoped rule)', () => {
+      const collided = graphqlNameCollisions(
+        ir({
+          models: [
+            model('TaskRow', [idField()]),
+            { ...model('Task', [idField()]), gqlName: 'TaskRow' },
+          ],
+        })
+      )
+      expect(collided.map(d => d.code)).toContain('NAME_COLLISION')
+    })
+
+    it('keeps gqlName reuse out of the default rules (namespace is per service)', () => {
+      const found = codes(
+        ir({
+          models: [
+            model('TaskRow', [idField()]),
+            { ...model('Task', [idField()]), gqlName: 'TaskRow' },
+          ],
+        })
+      )
+      expect(found).not.toContain('NAME_COLLISION')
+    })
+
+    it('flags fsName renames colliding in the firestore namespace', () => {
+      const found = codes(
+        ir({
+          enums: [
+            { name: 'ChatStatus', values: ['a'], fsName: 'Status' },
+            { name: 'ReviewStatus', values: ['b'], fsName: 'Status' },
+          ],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags a firestore doc colliding with an embedded model fs name', () => {
+      const found = codes(
+        ir({
+          models: [model('Attachment', [field('url')])], // no id → embedded value object
+          firestore: [
+            { name: 'Attachment', from: undefined, collection: 'x/{id}', pick: [], omit: [], fields: [field('a')], meta: false },
+          ],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags a union sharing a logical name with a model', () => {
+      const found = codes(
+        ir({
+          models: [model('Draft', [idField(), field('operationType')])],
+          unions: [{ name: 'Draft', discriminant: 'operationType', variants: ['Draft'] }],
+        })
+      )
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('flags a model claiming the reserved Json type', () => {
+      const found = codes(ir({ models: [model('Json', [idField()])] }))
+      expect(found).toContain('NAME_COLLISION')
+    })
+
+    it('allows the same name across namespaces (fsName renames)', () => {
+      const found = codes(
+        ir({
+          enums: [{ name: 'Status', values: ['a'], fsName: 'ReviewStatus' }],
+          models: [model('Review', [idField(), field('status', { type: { kind: 'enum', name: 'Status' } })])],
+        })
+      )
+      expect(found).not.toContain('NAME_COLLISION')
+    })
+
+    it('allows a firestore doc named after the table it projects', () => {
+      const found = codes(
+        ir({
+          models: [model('Task', [idField()])],
+          firestore: [{ name: 'Task', from: 'Task', collection: 'tasks/{id}', pick: [], omit: [], fields: [], meta: true }],
+        })
+      )
+      expect(found).not.toContain('NAME_COLLISION')
+    })
   })
 
   it('returns no diagnostics for a clean IR', () => {

@@ -7,6 +7,7 @@ import { Ir } from '../ir/ir.js'
 import { RawApi, RawContract, RawGeneratorDecl, RawGeneratorUse } from '../parser/raw-document.js'
 import { resolveImports } from '../resolver/import-resolver.js'
 import { createFsLoader, ModuleLoader } from '../resolver/module-loader.js'
+import { graphqlNameCollisions } from '../validation/rules.js'
 import { validateIr } from '../validation/validate.js'
 import { createDefaultRegistry } from '../generators/index.js'
 import { GeneratedFile, GeneratorContext } from '../generators/generator.js'
@@ -43,10 +44,18 @@ export const compile = (entryPath: string, options: CompileOptions = {}): Compil
   const { documents, diagnostics: importDiagnostics } = resolveImports(entryPath, loader)
   const { ir, diagnostics: buildDiagnostics } = buildIr(documents)
   const validationDiagnostics = validateIr(ir)
+  // A GraphQL schema is generated per data-connect-graphql declaration from the
+  // declaring yml's subtree, so its name uniqueness only holds at that scope —
+  // distinct services may reuse a gqlName. generateAll re-compiles each target
+  // with the declaring yml as entry, which is exactly when this check applies.
+  const entryDoc = documents[documents.length - 1]
+  const graphqlDiagnostics = entryDoc?.generatorDecls?.some(decl => decl.generator === 'data-connect-graphql')
+    ? graphqlNameCollisions(ir)
+    : []
   return {
     ir,
     documents,
-    diagnostics: [...importDiagnostics, ...buildDiagnostics, ...validationDiagnostics],
+    diagnostics: [...importDiagnostics, ...buildDiagnostics, ...validationDiagnostics, ...graphqlDiagnostics],
   }
 }
 
@@ -156,6 +165,30 @@ const findGeneratorDecl = (name: string, doc: RawContract, rootDoc: RawContract)
   doc.generatorDecls?.find(decl => decl.generator === name) ??
   rootDoc.generatorDecls?.find(decl => decl.generator === name)
 
+/** Generators whose output imports the shared types barrel via `options.typesImport`. */
+const TYPES_IMPORT_GENERATORS = new Set(['api-types', 'task-payloads'])
+
+/**
+ * Derive the default `typesImport` specifier from the typescript declaration
+ * itself: the relative path from the job's output directory to the declared
+ * barrel (`out` + `file`, default `types.ts`). The declaration resolves
+ * nearest-first (same yml → root), mirroring how entries resolve declarations,
+ * so both outputs stay in sync when the barrel is moved or renamed. An explicit
+ * `options.typesImport` always wins; without a typescript declaration in scope
+ * the generator's built-in default applies.
+ */
+const deriveTypesImport = (outDir: string, doc: RawContract, rootDoc: RawContract): string | undefined => {
+  const decl = findGeneratorDecl('typescript', doc, rootDoc)
+  if (!decl) return undefined
+  const declaringDoc = doc.generatorDecls?.includes(decl) ? doc : rootDoc
+  // Alias problems are reported when the typescript job itself is built.
+  const barrelDir = resolveOutDir(decl.out, declaringDoc, rootDoc, [])
+  if (barrelDir === undefined) return undefined
+  const barrel = join(barrelDir, (decl.file ?? 'types.ts').replace(/\.ts$/, ''))
+  const specifier = relative(outDir, barrel)
+  return specifier.startsWith('.') ? specifier : `./${specifier}`
+}
+
 /**
  * Build generator jobs from the declaration/application DSL:
  * - api-scoped generators run for entries that opt in (section `defaults` →
@@ -191,11 +224,10 @@ const buildGeneratorJobs = (
       const output: GeneratorOutputSettings = {}
       const file = use.file ?? decl?.file
       const split = use.split ?? decl?.split ?? generator?.defaultOutput?.split
-      const options = use.options ?? decl?.options
+      let options = use.options ?? decl?.options
       const header = use.header ?? decl?.header
       if (file !== undefined) output.file = file
       if (split !== undefined) output.split = split
-      if (options !== undefined) output.options = options
       // Split mode needs a per-api file name; bundled mode cannot expand one.
       const effectiveFile = file ?? generator?.defaultOutput?.file
       if (effectiveFile !== undefined && split === false && API_PLACEHOLDER_RE.test(effectiveFile)) {
@@ -221,6 +253,11 @@ const buildGeneratorJobs = (
       if (expanded === undefined) continue
       const outDir = resolveOutDir(expanded, doc, rootDoc, diagnostics)
       if (outDir === undefined) continue
+      if (TYPES_IMPORT_GENERATORS.has(use.generator) && options?.['typesImport'] === undefined) {
+        const derived = deriveTypesImport(outDir, doc, rootDoc)
+        if (derived !== undefined) options = { ...(options ?? {}), typesImport: derived }
+      }
+      if (options !== undefined) output.options = options
       const key = [use.generator, outDir, file ?? '', String(split ?? ''), JSON.stringify(options ?? null), header ?? '\u0001'].join('\u0000')
       const existing = grouped.get(key)
       if (existing) {

@@ -105,7 +105,8 @@ export const splitGroups = (ir: Ir): SplitGroups => {
   }
   const leftoverEnums = ir.enums.map(e => e.name).filter(name => !enumHome.has(name))
   const leftoverModels = ir.models
-    .filter(model => !isTable(model))
+    // Pinned value objects are emitted at their own `out`, never in the default barrels.
+    .filter(model => !isTable(model) && model.out === undefined)
     .map(model => model.name)
     .filter(name => !modelHome.has(name))
   return { tables, enumHome, modelHome, leftoverEnums, leftoverModels }

@@ -10,7 +10,7 @@ From one contract, generate:
 - **Zod** validation schemas
 - **Data Connect** GraphQL schema (`@table`, keys, directives), query/mutation
   operations (routed per connector), and `Any`↔logical adapters
-- **Firestore** projection schemas (denormalized read model with `_meta_`)
+- **Firestore** projection schemas (denormalized read model; shared field groups via fragments)
 - **API** request/response types, request-validation Zod, and class-validator DTOs
 - **Cloud Task / Pub/Sub** payload envelopes + delivery constants
 - **SQL migrations** for constraints Data Connect can't express (composite FKs,
@@ -473,9 +473,9 @@ reality automatically:
 
 - **relations → resolved string ids** (`ownerUser` → `ownerUserId: z.string()`)
 - **timestamps → `z.date()`**, optional fields → `.nullable()`
-- a **`_meta_`** consistency envelope is attached (opt out with `meta: false`)
 - `pick` / `omit` select which base fields survive
 - inline `fields` add denormalized data (flattened DAG edges, stringified JSON)
+- `extends: [<fragment>…]` splices shared fields in (see **Fragments** below)
 
 ```yaml
 firestore:
@@ -509,7 +509,6 @@ export const ShopSchema = DcShopSchema.pick({
 }).extend({
   createdAt: z.date(),
   updatedAt: z.date().nullable(),
-  _meta_: _Meta_Schema,
 })
 ```
 
@@ -525,6 +524,46 @@ Additional projection options:
   no projected field references it
 - FS-only enums render as frozen consts (`REVIEW_STATE` + `ReviewStateSchema`),
   co-located with the first projection that references them
+
+### Fragments (`fragments:` + `extends:`)
+
+A **fragment** is a named group of fields declared once and spliced into
+consumers via `extends: [<name>…]` — the way to share a common field across
+many projections (a consistency `_meta_` envelope, audit columns, …) without a
+tool-imposed convention. The fragment field's name, type, and which docs carry
+it are all yours.
+
+The value objects a fragment references can be **pinned** to a fixed split
+output via `out` (+ optional `file`) on the model declaration. A pinned value
+object is *placement-scoped*: emitted only at that location (dependency-ordered,
+with an `index.ts` barrel), imported by consumers via that directory, and
+excluded from the default `typescript`/`zod` barrels — so it lives purely in the
+firestore output. This is what lets a shared envelope sit under `firestore/_/`.
+
+```yaml
+models:
+  MetaOp:
+    out: firestore/_          # → firestore/_/_meta_.ts (+ firestore/_/index.ts)
+    file: _meta_.ts
+    fields:
+      id: { type: string }
+  Meta:
+    out: firestore/_
+    file: _meta_.ts
+    fields:
+      scope: { type: float, nullable: true }
+      op: { type: MetaOp, nullable: true }
+
+fragments:
+  meta:
+    fields:
+      _meta_: { type: Meta }
+
+firestore:
+  Shop:
+    from: Shop
+    extends: [meta]            # appends `_meta_: MetaSchema` (imported from './_')
+```
 
 ## Discriminated unions
 
@@ -609,7 +648,7 @@ project:
 | `data-connect-operations`| document | `<connector>/operations.gql` + `.ts`; `split: true` → `<connector>/operations/<entity>/{queries,mutations}.gql` | queries/mutations (where ops, orderBy, limit, aggregate, exprs, inc), per connector; split matches the real Data Connect repo layout |
 | `data-connect-adapter`   | document | `data-connect-adapters.ts`    | convert `Any` rows ⇄ logical types                     |
 | `firestore-types`        | document | `firestore-types.ts`          | naive TS types with Firestore `Timestamp` (all models) |
-| `firestore`              | document | `firestore.ts`; `split: true` → `firestore/<collection>.ts` + barrel | Firestore projection Zod schemas (derived, denormalized); split adds `_meta_` under `firestore/_/`, DC-schema `.pick()` reuse, `FIRESTORE_DATABASES` constants in the barrel |
+| `firestore`              | document | `firestore.ts`; `split: true` → `firestore/<collection>.ts` + barrel | Firestore projection Zod schemas (derived, denormalized); `extends` fragments, pinned value objects under their `out` (e.g. `firestore/_/`), DC-schema `.pick()` reuse, `FIRESTORE_DATABASES` constants in the barrel |
 | `api-types`              | api | `api-types.ts`                | endpoint request/response types                        |
 | `api-validation`         | api | `api-validation.ts`           | endpoint request-validation Zod                        |
 | `api-dto`                | api | `<operation>.dto.ts` per api  | class-validator DTO classes (NestJS `dto/` convention) |

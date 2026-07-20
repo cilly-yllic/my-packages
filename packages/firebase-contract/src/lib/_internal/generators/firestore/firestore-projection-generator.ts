@@ -1,4 +1,4 @@
-import { findModel, Ir, IrField, IrFirestoreDoc, ScalarType } from '../../ir/ir.js'
+import { findFragment, findModel, Ir, IrField, IrFirestoreDoc, ScalarType } from '../../ir/ir.js'
 import { singleQuote } from '../support/naming.js'
 import { isRelation, relationFkName } from '../support/relations.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
@@ -20,20 +20,6 @@ const SCALAR_ZOD: Record<ScalarType, string> = {
   json: 'z.unknown()',
   id: 'z.string()',
 }
-
-const META_BLOCK = [
-  'export const _Meta_OperationSchema = z.object({',
-  '  id: z.string(),',
-  '  identifierId: z.string(),',
-  '  updatedAt: z.number(),',
-  '})',
-  'export const _Meta_Schema = z.object({',
-  '  scope: z.number().nullable(),',
-  '  sys: z.number().nullable(),',
-  '  op: _Meta_OperationSchema.nullable(),',
-  '})',
-  'export type _Meta_ = z.infer<typeof _Meta_Schema>',
-].join('\n')
 
 interface FsField {
   name: string
@@ -73,7 +59,8 @@ const effectiveFields = (ir: Ir, doc: IrFirestoreDoc): FsField[] => {
     const { name, schema } = fsField(ir, field)
     entries.set(name, schema)
   }
-  for (const field of doc.fields) {
+  const added = [...doc.fields, ...doc.extends.flatMap(name => findFragment(ir, name)?.fields ?? [])]
+  for (const field of added) {
     const { name, schema } = fsField(ir, field)
     entries.set(name, schema)
   }
@@ -85,7 +72,6 @@ const renderDoc = (ir: Ir, doc: IrFirestoreDoc): string => {
   if (doc.collection) lines.push(`// ${doc.collection}`)
   else if (doc.description) lines.push(`// ${doc.description}`)
   const fields = effectiveFields(ir, doc).map(field => `  ${field.name}: ${field.schema},`)
-  if (doc.meta) fields.push('  _meta_: _Meta_Schema,')
   lines.push(`export const ${doc.name}Schema = z.object({\n${fields.join('\n')}\n})`)
   lines.push(`export type ${doc.name} = z.infer<typeof ${doc.name}Schema>`)
   return lines.join('\n')
@@ -109,9 +95,6 @@ export const createFirestoreProjectionGenerator = (): Generator =>
       return []
     }
     const blocks: string[] = [...headerBlocks(context), "import { z } from 'zod'"]
-    if (ir.firestore.some(doc => doc.meta)) {
-      blocks.push(META_BLOCK)
-    }
     for (const doc of ir.firestore) {
       blocks.push(renderDoc(ir, doc))
     }

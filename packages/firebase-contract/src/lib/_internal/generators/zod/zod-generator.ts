@@ -23,7 +23,8 @@ export const createZodGenerator = (): Generator =>
       blocks.push(renderEnum(irEnum))
     }
 
-    for (const model of ir.models) {
+    // Pinned value objects (models with `out`) are firestore-scoped: excluded here.
+    for (const model of ir.models.filter(model => model.out === undefined)) {
       blocks.push(renderModel(model, ir))
     }
 

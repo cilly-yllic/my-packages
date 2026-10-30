@@ -83,7 +83,7 @@ export const createTypeScriptSplitLayout = (): Generator => ({
       emit(moduleName, enums, [...models, table], false)
     }
 
-    const exports = files.map(file => `export * from './${file.path.replace(/^types\//, 'types/').replace(/\.ts$/, '')}'`)
+    const exports = files.map(file => `export * from './${file.path.replace(/\.ts$/, '')}'`)
     files.push({ path: outputFile(context, 'types.ts'), content: `${[...headerBlocks(context), exports.join('\n')].join('\n\n')}\n` })
     return files
   },

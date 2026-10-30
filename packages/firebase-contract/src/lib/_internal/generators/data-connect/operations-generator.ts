@@ -363,7 +363,7 @@ const renderOperationGql = (ir: Ir, op: IrOperation, model: IrModel): string => 
       // (`review.catalog.id` → `catalog: { id: { eq: $x } }` inside `review: { … }`).
       const rest = w.field.slice(dot + 1).split('.')
       let inner = `{ ${w.op}: ${value} }`
-      for (let i = rest.length - 1; i >= 0; i--) inner = `{ ${rest[i]}: ${inner} }`.replace(/^\{ /, '{ ').replace(/ \}$/, ' }')
+      for (let i = rest.length - 1; i >= 0; i--) inner = `{ ${rest[i]}: ${inner} }`
       // strip outermost braces since group renderer adds them
       group.conds.push(inner.slice(2, -2))
       group.sub = true

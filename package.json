@@ -23,13 +23,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",
-    "@nx/eslint": "23.3.1",
-    "@nx/eslint-plugin": "23.3.1",
-    "@nx/js": "23.3.1",
-    "@nx/plugin": "23.3.1",
-    "@nx/vite": "23.3.1",
-    "@nx/vitest": "23.3.1",
-    "@nx/web": "23.3.1",
+    "@nx/eslint": "24.0.2",
+    "@nx/eslint-plugin": "24.0.2",
+    "@nx/js": "24.0.2",
+    "@nx/plugin": "24.0.2",
+    "@nx/vite": "24.0.2",
+    "@nx/vitest": "24.0.2",
+    "@nx/web": "24.0.2",
     "@swc-node/register": "1.12.0",
     "@swc/cli": "0.8.1",
     "@swc/core": "1.15.8",
@@ -43,7 +43,7 @@
     "jiti": "2.4.2",
     "jsdom": "~22.1.0",
     "jsonc-eslint-parser": "^2.1.0",
-    "nx": "23.3.1",
+    "nx": "24.0.2",
     "prettier": "^2.6.2",
     "tsc-alias": "^1.9.1",
     "tslib": "^2.3.0",
@@ -58,7 +58,7 @@
     "plugins/*"
   ],
   "dependencies": {
-    "@nx/devkit": "23.3.1",
+    "@nx/devkit": "24.0.2",
     "fs-extra": "^11.3.6",
     "minimatch": "^10.2.5"
   },

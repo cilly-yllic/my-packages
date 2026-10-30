@@ -60,7 +60,7 @@
   "dependencies": {
     "@nx/devkit": "24.0.2",
     "fs-extra": "^11.4.1",
-    "minimatch": "^11.0.3"
+    "minimatch": "^10.2.6"
   },
   "nx": {
     "includedScripts": [],

@@ -11,17 +11,8 @@
     "url": "https://github.com/cilly-yllic/my-packages/issues"
   },
   "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/firestore-document-type-patterns/README.md",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "@my-packages/source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
     "./core": "./dist/lib/core.js",
     "./security-rule": "./dist/lib/security-rule.js",
     "./types/firestore-field-types": "./dist/lib/types/firestore-field-types.js",

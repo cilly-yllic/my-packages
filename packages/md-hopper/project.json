@@ -6,6 +6,29 @@
   "tags": [],
   "// targets": "to see all targets run: nx show project md-hopper --web",
   "targets": {
+    "build": {
+      "// note": "package.json にルートの main / exports がない (CLI 専用) ため @nx/js/typescript が build を推論しない。推論時と同じ内容を明示する",
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/package.json",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{projectRoot}/tsconfig.lib.json",
+        "{projectRoot}/src/**/*.ts",
+        "!{projectRoot}/src/**/*.spec.ts",
+        "!{projectRoot}/src/**/*.test.ts",
+        { "dependentTasksOutputFiles": "**/*.{d.ts,d.cts,d.mts,tsbuildinfo}", "transitive": true }
+      ],
+      "outputs": [
+        "{projectRoot}/dist/**/*.{js,cjs,mjs,jsx,d.ts,d.cts,d.mts}{,.map}",
+        "{projectRoot}/dist/tsconfig.lib.tsbuildinfo"
+      ],
+      "options": {
+        "cwd": "packages/md-hopper",
+        "command": "tsc --build tsconfig.lib.json"
+      }
+    },
     "replace-aliases": {},
     "output": { "executor": "builder:output" },
     "generator": { "executor": "builder:generator" }

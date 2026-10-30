@@ -38,8 +38,8 @@ export const getElements = (txt: string) => {
 
 export const getProperties = (txt: string) => {
   const { indent, token } = getElements(txt)
-  let symbol = ''
-  let text = ''
+  let symbol: string
+  let text: string
   switch (token.type) {
     case TOKEN_TYPES.list: {
       const symbolAndText = getSymbolAndText((token as Tokens.List).items[0])

@@ -18,6 +18,7 @@ import {
   MD_HOPPER_CONTENT_REG_EXP,
   BEGIN_COMMENT,
   END_COMMENT,
+  END_COMMENT_PATTERN,
   getParamExp,
 } from '~types/md.js'
 
@@ -27,7 +28,7 @@ import { isBoolean } from './type-check.js'
 
 export const getParam = (txt: string, key: string) => {
   const PREFIX = `${BEGIN_COMMENT}\\s*${MD_HOPPER_COMMENT_PREFIX}:\\s*${key}:`
-  const reg = new RegExp(`${PREFIX}(.*?)${END_COMMENT}`, 's')
+  const reg = new RegExp(`${PREFIX}(.*?)${END_COMMENT_PATTERN}`, 's')
   if (!reg.test(txt)) {
     return ''
   }

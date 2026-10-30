@@ -272,20 +272,21 @@ export const replace = (detail: Detail, details: Detail[]) => {
     }
     const property = _section.replace(MD_HOPPER_PROPERTY_REG_EXP, '$1')
     const { params, content: _content } = getSectionParams(_section)
-    let content = _content
     let section = _section
     switch (property) {
-      case PROPERTIES.LINK_NEXT_LINE:
-        content = getLinkContent(detail.path, _content, params as LinkNextLineProperties, details)
+      case PROPERTIES.LINK_NEXT_LINE: {
+        const content = getLinkContent(detail.path, _content, params as LinkNextLineProperties, details)
         section = getSectionByContent(property, params, content)
         break
-      case PROPERTIES.BEGIN_LINKS:
-        content = getLinksContent(params as EndLinksProperties, linksDetails, lineLinksDetails)
+      }
+      case PROPERTIES.BEGIN_LINKS: {
+        const content = getLinksContent(params as EndLinksProperties, linksDetails, lineLinksDetails)
         section = getSectionByContent(property, params, content)
         if (!hasEndLinksSection) {
           section += `\n${BEGIN_COMMENT} ${MD_HOPPER_COMMENT_PREFIX}${PARAM_SEPARATOR} ${PROPERTIES.END_LINKS}${PARAM_SEPARATOR} ${END_COMMENT}`
         }
         break
+      }
       case PROPERTIES.BEGIN_DEFINE_LINKS:
         section = getSectionByContent(
           property,

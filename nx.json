@@ -87,5 +87,8 @@
       "preVersionCommand": "npx nx run-many -t output"
     },
     "projectsRelationship": "independent"
+  },
+  "affected": {
+    "legacy": true
   }
 }

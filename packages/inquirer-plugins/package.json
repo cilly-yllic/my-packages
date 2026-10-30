@@ -1,6 +1,6 @@
 {
   "name": "inquirer-plugins",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -25,17 +25,8 @@
     "url": "https://github.com/cilly-yllic/my-packages/issues"
   },
   "homepage": "https://github.com/cilly-yllic/my-packages/blob/main/packages/inquirer-plugins/src/lib/_internal/plugins/table/README.md",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
-    ".": {
-      "@my-packages/source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
     "./table": "./dist/lib/modules/table.js",
     "./types/chalk": "./dist/lib/modules/types/chalk.js",
     "./types/inquirer": "./dist/lib/modules/types/inquirer.js",
@@ -47,8 +38,8 @@
     "!**/*.tsbuildinfo"
   ],
   "dependencies": {
-    "@inquirer/core": "^11.2.1",
-    "@inquirer/type": "^4.0.7",
+    "@inquirer/core": "^12.0.6",
+    "@inquirer/type": "^4.2.1",
     "chalk": "^5.6.2",
     "cli-cursor": "^5.0.0",
     "cli-table3": "^0.6.5",

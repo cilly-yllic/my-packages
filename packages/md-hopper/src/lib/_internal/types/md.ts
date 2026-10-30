@@ -47,7 +47,8 @@ export const BEGIN_COMMENT = '<!--'
 export const END_COMMENT = '-->'
 export const PARAM_SEPARATOR = ':'
 export const MD_HOPPER_COMMENT_PREFIX = 'MD_HOPPER'
-export const COMMENT_REG_EXP = new RegExp(`${BEGIN_COMMENT}\\s*.*?${END_COMMENT}`, 'gs')
+// HTML のコメントは `--!>` でも閉じるため、それも終端として扱う
+export const COMMENT_REG_EXP = new RegExp(`${BEGIN_COMMENT}.*?--!?>`, 'gs')
 export const BRAKE_LINE_REG_EXP = new RegExp(/\r?\n/, 'g')
 export const LINK_REG_EXP = new RegExp('^(\\s*.*)\\[(.+)][(|\\[](.+)[)|\\]].*')
 export const MD_HOPPER_COMMENT_PREFIX_REG_EXP = new RegExp(

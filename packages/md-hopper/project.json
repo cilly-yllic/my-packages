@@ -18,8 +18,11 @@
         "{projectRoot}/src/**/*.ts",
         "!{projectRoot}/src/**/*.spec.ts",
         "!{projectRoot}/src/**/*.test.ts",
-        { "dependentTasksOutputFiles": "**/*.{d.ts,d.cts,d.mts,tsbuildinfo}", "transitive": true }
+        { "dependentTasksOutputFiles": "**/*.{d.ts,d.cts,d.mts,tsbuildinfo}", "transitive": true },
+        { "fileset": "{projectRoot}/**/*.{d.ts,d.cts,d.mts}", "dependencies": true },
+        "^{projectRoot}/tsconfig.lib.json"
       ],
+      "syncGenerators": ["@nx/js:typescript-sync"],
       "outputs": [
         "{projectRoot}/dist/**/*.{js,cjs,mjs,jsx,d.ts,d.cts,d.mts}{,.map}",
         "{projectRoot}/dist/tsconfig.lib.tsbuildinfo"

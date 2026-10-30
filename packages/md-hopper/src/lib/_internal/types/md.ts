@@ -60,7 +60,7 @@ export const MD_HOPPER_PARAMS_REG_EXP = new RegExp(
   's'
 )
 export const MD_HOPPER_CONTENT_REG_EXP = new RegExp(
-  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}.*${END_COMMENT_PATTERN}(.*)`,
+  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}.*?${END_COMMENT_PATTERN}(.*)`,
   's'
 )
 export const MD_HOPPER_PROPERTY_REG_EXP = new RegExp(`^([^${PARAM_SEPARATOR}]+?)${PARAM_SEPARATOR}.*`, 's')

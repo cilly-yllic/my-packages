@@ -45,26 +45,27 @@ export interface EndLinksProperties {
 export const LINK_NAME_PREFIX = 'md_hopper:'
 export const BEGIN_COMMENT = '<!--'
 export const END_COMMENT = '-->'
+// 正規表現に埋め込む終端パターン。HTML のコメントは `--!>` でも閉じるため、それも終端として扱う
+export const END_COMMENT_PATTERN = '--!?>'
 export const PARAM_SEPARATOR = ':'
 export const MD_HOPPER_COMMENT_PREFIX = 'MD_HOPPER'
-// HTML のコメントは `--!>` でも閉じるため、それも終端として扱う
-export const COMMENT_REG_EXP = new RegExp(`${BEGIN_COMMENT}.*?--!?>`, 'gs')
+export const COMMENT_REG_EXP = new RegExp(`${BEGIN_COMMENT}.*?${END_COMMENT_PATTERN}`, 'gs')
 export const BRAKE_LINE_REG_EXP = new RegExp(/\r?\n/, 'g')
 export const LINK_REG_EXP = new RegExp('^(\\s*.*)\\[(.+)][(|\\[](.+)[)|\\]].*')
 export const MD_HOPPER_COMMENT_PREFIX_REG_EXP = new RegExp(
   `${BEGIN_COMMENT}\\s*${MD_HOPPER_COMMENT_PREFIX}${PARAM_SEPARATOR}\\s*`
 )
 export const MD_HOPPER_PARAMS_REG_EXP = new RegExp(
-  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}(.*?)${END_COMMENT}.*`,
+  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}(.*?)${END_COMMENT_PATTERN}.*`,
   's'
 )
 export const MD_HOPPER_CONTENT_REG_EXP = new RegExp(
-  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}.*${END_COMMENT}(.*)`,
+  `^[^${PARAM_SEPARATOR}]+${PARAM_SEPARATOR}.*${END_COMMENT_PATTERN}(.*)`,
   's'
 )
 export const MD_HOPPER_PROPERTY_REG_EXP = new RegExp(`^([^${PARAM_SEPARATOR}]+?)${PARAM_SEPARATOR}.*`, 's')
 export const getParamExp = (param: string) =>
   new RegExp(
-    `${BEGIN_COMMENT}\\s*${MD_HOPPER_COMMENT_PREFIX}\\s*${PARAM_SEPARATOR}\\s*${param}\\s*${PARAM_SEPARATOR}.*?${END_COMMENT}\\n*`,
+    `${BEGIN_COMMENT}\\s*${MD_HOPPER_COMMENT_PREFIX}\\s*${PARAM_SEPARATOR}\\s*${param}\\s*${PARAM_SEPARATOR}.*?${END_COMMENT_PATTERN}\\n*`,
     'gs'
   )

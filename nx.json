@@ -80,6 +80,11 @@
       "options": {
         "command": "tsc-alias -p '{projectRoot}/tsconfig.lib.json'"
       }
+    },
+    "output": {
+      "dependsOn": [
+        "^output"
+      ]
     }
   },
   "release": {

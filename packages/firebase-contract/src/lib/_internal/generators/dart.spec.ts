@@ -234,9 +234,9 @@ ${body}`
 
   it('keeps explicit null for nullable fields with a default (freezed readValue)', () => {
     const content = generate(false)[0].content
-    expect(content).toContain('    @JsonKey(readValue: _readProductFallback) String? fallback,')
+    expect(content).toContain('    @JsonKey(readValue: _read$Product$fallback) String? fallback,')
     expect(content).toContain(
-      "Object? _readProductFallback(Map<dynamic, dynamic> json, String key) =>\n    json.containsKey(key) ? json[key] : 'none';"
+      "Object? _read$Product$fallback(Map<dynamic, dynamic> json, String key) =>\n    json.containsKey(key) ? json[key] : 'none';"
     )
     expect(content).not.toContain("@Default('none')")
     expect(generate(false, 'plain')[0].content).toContain(
@@ -286,7 +286,7 @@ firestore:
     expect(() => generate(false, undefined, contract(body('class')))).toThrow(
       /"class" .* is not a valid Dart type name/
     )
-    expect(() => generate(false, undefined, contract(body('DateTime')))).toThrow(/shadows a Dart core\/support type/)
+    expect(() => generate(false, undefined, contract(body('DateTime')))).toThrow(/shadows a Dart core\/support name/)
   })
 
   it('exports from a nested barrel relative to the output root', () => {
@@ -296,6 +296,55 @@ firestore:
     expect(barrel).toContain("export '../shop.dart';")
     expect(barrel).toContain("export '../timestamp_converter.dart';")
     expect(files.some(f => f.path === 'shop.dart')).toBe(true)
+  })
+
+  it('keeps readValue helpers unique across classes (A.bC vs AB.c)', () => {
+    const body = `
+firestore:
+  A:
+    fields:
+      bC: { type: string, nullable: true, default: x }
+  AB:
+    fields:
+      c: { type: string, nullable: true, default: y }
+`
+    const content = generate(false, undefined, contract(body))[0].content
+    expect(content).toContain('Object? _read$A$bC(')
+    expect(content).toContain('Object? _read$AB$c(')
+  })
+
+  it('accepts contextual keywords as type names but rejects support names', () => {
+    const body = (name: string): string => `
+firestore:
+  ${name}:
+    fields:
+      at: timestamp
+`
+    for (const name of ['async', 'show', 'when']) {
+      expect(() => generate(false, undefined, contract(body(name)))).not.toThrow()
+    }
+    expect(() => generate(false, undefined, contract(body('timestampFromJson')))).toThrow(
+      /shadows a Dart core\/support name/
+    )
+    expect(() => generate(false, undefined, contract(body('ArgumentError')))).toThrow(/shadows/)
+  })
+
+  it('normalizes the barrel path before computing exports and collisions', () => {
+    const { ir } = buildIr([parseContract(CONTRACT, '/c.yml')])
+    const barrelOf = (file: string): GeneratedFile[] =>
+      createDartGenerator().generate(ir, { output: { split: true, file } })
+    const root = barrelOf('./contracts.dart')
+    expect(root.find(f => f.path === 'contracts.dart')?.content).toContain("export 'shop.dart';")
+    const nested = barrelOf('sub/./contracts.dart')
+    expect(nested.find(f => f.path === 'sub/contracts.dart')?.content).toContain("export '../shop.dart';")
+    const windows = barrelOf('sub\\contracts.dart')
+    expect(windows.find(f => f.path === 'sub/contracts.dart')?.content).toContain("export '../shop.dart';")
+    for (const bad of ['./timestamp_converter.dart', 'TIMESTAMP_CONVERTER.dart', '../contracts.dart', '/abs.dart']) {
+      expect(() => barrelOf(bad)).toThrow(/must not be timestamp_converter.dart or leave the output directory/)
+    }
+    // A barrel that differs only in case from a type file pushes the type file aside.
+    const upper = barrelOf('Shop.dart')
+    expect(upper.map(f => f.path)).toContain('shop_2.dart')
   })
 
   it('refuses a barrel named like the timestamp helper file', () => {
@@ -363,6 +412,25 @@ firestore:
     })
     expect(result.ok).toBe(false)
     expect(result.diagnostics.some(d => d.code === 'GENERATOR_FAILED' && d.message.includes('dart'))).toBe(true)
+  })
+
+  it('keeps other generators running and reports the failing one with its error class', () => {
+    const { generate: run } = { generate: generateAll }
+    const result = run('/proj/contract.yml', {
+      loader: createMemoryLoader({
+        '/proj/contract.yml': `
+generators:
+  - { generator: dart, out: lib/gen }
+  - { generator: typescript, out: src }
+firestore:
+  class:
+    fields:
+      x: string
+`,
+      }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.diagnostics.filter(d => d.code === 'GENERATOR_FAILED')).toHaveLength(1)
   })
 
   it('rejects an unknown option key', () => {

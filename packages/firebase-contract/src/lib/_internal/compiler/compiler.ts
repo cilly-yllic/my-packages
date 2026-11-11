@@ -536,7 +536,9 @@ export const generate = (entryPath: string, options: GenerateOptions): GenerateR
     try {
       generated = generator.generate(ir, context)
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : String(cause)
+      // Keep the error class for unexpected defects (TypeError etc.); plain Errors are contract rejections.
+      const message =
+        cause instanceof Error ? (cause.name === 'Error' ? cause.message : `${cause.name}: ${cause.message}`) : String(cause)
       collected.push(error('GENERATOR_FAILED', `Generator "${name}" failed: ${message}`))
       continue
     }

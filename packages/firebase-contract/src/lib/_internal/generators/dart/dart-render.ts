@@ -215,9 +215,10 @@ const renderFreezedClass = (dartClass: DartClass, enums: Map<string, DartEnum>):
   return [lines.join('\n'), ...readers].join('\n\n')
 }
 
-/** Private top-level `readValue` function name for a field (`_readProductNote`). */
-const readerName = (className: string, field: DartField): string =>
-  `_read${className}${field.name.charAt(0).toUpperCase()}${field.name.slice(1)}`
+/** Private top-level `readValue` function name for a field (`_read$Product$note`). */
+// `$` never appears in class names (validated) or field identifiers, so the
+// separator keeps `A.bC` and `AB.c` apart.
+const readerName = (className: string, field: DartField): string => `_read$${className}$${field.name}`
 
 /** Raw JSON value as a Dart literal (what the key would hold in the document). */
 const jsonLiteral = (value: unknown): string => {

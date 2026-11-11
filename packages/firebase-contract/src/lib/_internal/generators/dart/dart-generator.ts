@@ -1,9 +1,11 @@
+import { posix } from 'node:path'
+
 import { Ir } from '../../ir/ir.js'
 import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { snakeCase } from '../support/naming.js'
 import { outputFile } from '../support/templates.js'
-import { buildDartContract, DART_KEYWORDS, DartClass, DartContract, DartEnum } from './dart-model.js'
+import { buildDartContract, DartClass, DartContract, DartEnum } from './dart-model.js'
 import {
   DART_STYLES,
   DartStyle,
@@ -73,7 +75,86 @@ const RESERVED_TYPE_NAMES = new Set([
   'JsonSerializable',
   'JsonConverter',
   'TimestampConverter',
+  'ArgumentError',
+  // Top-level Timestamp helpers emitted into the same library.
+  'timestampFromJson',
+  'timestampFromJsonOrNull',
+  'timestampToJson',
+  'timestampToJsonOrNull',
 ])
+
+/**
+ * Words that cannot name a Dart type: reserved words plus built-in identifiers.
+ * Contextual keywords (`async`, `show`, `when`, `on`, …) are valid type names.
+ */
+const TYPE_NAME_KEYWORDS = new Set([
+  'assert',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'default',
+  'do',
+  'else',
+  'enum',
+  'extends',
+  'false',
+  'final',
+  'finally',
+  'for',
+  'if',
+  'in',
+  'is',
+  'new',
+  'null',
+  'rethrow',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'var',
+  'void',
+  'while',
+  'with',
+  'abstract',
+  'as',
+  'covariant',
+  'deferred',
+  'dynamic',
+  'export',
+  'extension',
+  'external',
+  'factory',
+  'Function',
+  'get',
+  'implements',
+  'import',
+  'interface',
+  'late',
+  'library',
+  'mixin',
+  'operator',
+  'part',
+  'required',
+  'set',
+  'static',
+  'typedef',
+])
+
+/**
+ * Normalize an output-relative path (`./a`, `sub/./a`, `sub\\a` → POSIX form);
+ * undefined when it is absolute or escapes the output directory.
+ */
+const normalizeOutPath = (raw: string): string | undefined => {
+  const normalized = posix.normalize(raw.replace(/\\/g, '/'))
+  if (normalized.startsWith('/') || normalized === '..' || normalized.startsWith('../')) return undefined
+  return normalized
+}
 
 /**
  * Every emitted Dart type (enums, value objects, projections, `<Doc>Path`
@@ -93,10 +174,10 @@ const assertTypeNames = (contract: DartContract): void => {
   }
   const problems: string[] = []
   for (const [name, claimed] of owners) {
-    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name) || DART_KEYWORDS.has(name)) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name) || TYPE_NAME_KEYWORDS.has(name)) {
       problems.push(`"${name}" (${claimed.join(', ')}) is not a valid Dart type name`)
     } else if (RESERVED_TYPE_NAMES.has(name)) {
-      problems.push(`"${name}" (${claimed.join(', ')}) shadows a Dart core/support type`)
+      problems.push(`"${name}" (${claimed.join(', ')}) shadows a Dart core/support name`)
     } else if (claimed.length > 1) {
       problems.push(`"${name}" is emitted by ${claimed.join(' and ')}`)
     }
@@ -119,7 +200,9 @@ const generateSingle = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => 
   const style = styleOf(context)
   const enums = enumMap(contract)
   const classes = classesOf(contract)
-  const path = outputFile(context, DEFAULT_FILE)
+  const path = normalizeOutPath(outputFile(context, DEFAULT_FILE))
+  if (path === undefined)
+    throw new Error(`dart generator: file "${outputFile(context, DEFAULT_FILE)}" must stay inside the output directory`)
   const base = (path.split('/').pop() ?? path).replace(/\.dart$/, '')
   const timestamps = classes.some(classUsesDateTime)
 
@@ -139,14 +222,15 @@ const generateSingle = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => 
 
 /** Assign unique snake_case file names (Dart `file_names` convention) per type. */
 const assignFileNames = (names: string[], reserved: string[]): Map<string, string> => {
-  const used = new Set(reserved)
+  // Case-insensitive: `A.dart` and `a.dart` are the same file on macOS / Windows.
+  const used = new Set(reserved.map(path => path.toLowerCase()))
   const files = new Map<string, string>()
   for (const name of names) {
     const base = snakeCase(name) || 'type'
     let candidate = `${base}.dart`
     let suffix = 2
-    while (used.has(candidate)) candidate = `${base}_${suffix++}.dart`
-    used.add(candidate)
+    while (used.has(candidate.toLowerCase())) candidate = `${base}_${suffix++}.dart`
+    used.add(candidate.toLowerCase())
     files.set(name, candidate)
   }
   return files
@@ -163,10 +247,11 @@ const generateSplit = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => {
   const style = styleOf(context)
   const enums = enumMap(contract)
   const classes = classesOf(contract)
-  const barrel = outputFile(context, DEFAULT_FILE)
-  if (barrel === TIMESTAMP_FILE || barrel.split('/').includes('..')) {
+  const rawBarrel = outputFile(context, DEFAULT_FILE)
+  const barrel = normalizeOutPath(rawBarrel)
+  if (barrel === undefined || barrel.toLowerCase() === TIMESTAMP_FILE) {
     throw new Error(
-      `dart generator: barrel file "${barrel}" must not be ${TIMESTAMP_FILE} or leave the output directory`
+      `dart generator: barrel file "${rawBarrel}" must not be ${TIMESTAMP_FILE} or leave the output directory`
     )
   }
   // Type files sit at the output root; the barrel may live in a subdirectory.

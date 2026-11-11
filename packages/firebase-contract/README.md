@@ -100,10 +100,11 @@ generators:
 - **`split`** — api scope: `true` emits one file per api (the `file` template
   must contain a placeholder), `false` bundles everything into one `file`.
   Document scope: `true` selects the generator's per-item split layout
-  (typescript, zod, firestore, data-connect-graphql, data-connect-operations)
+  (typescript, zod, firestore, data-connect-graphql, data-connect-operations, dart)
   and errors for generators without one.
 - **`options`** — free-form string map passed through to the generator.
-  Currently: `typesImport` (api-types, task-payloads, data-connect-operations)
+  Currently: `style` (dart: `freezed` | `plain`; unknown keys/values are
+  errors) and `typesImport` (api-types, task-payloads, data-connect-operations)
   overrides the types import path. For api-types and task-payloads this is
   normally unnecessary: when the option is absent and a `typescript` generator
   is declared (nearest-first: same yml → root), the import specifier is derived
@@ -579,6 +580,76 @@ firestore:
 error, not a silent no-op — a typo like `extends: [metaa]` fails generation
 rather than quietly dropping the shared fields.
 
+## Dart (Flutter) models
+
+The `dart` generator turns the **Firestore projections** (plus the enums and
+embedded value objects they reference) into Dart models, so a Flutter client
+reads and writes the same documents without a hand-maintained copy:
+
+```yaml
+generators:
+  - { generator: dart, out: apps/mobile/lib/gen/contracts, split: true }
+  # dependency-free classes instead of freezed:
+  # - { generator: dart, out: …, options: { style: plain } }
+```
+
+| contract                         | Dart                                                                 |
+| -------------------------------- | -------------------------------------------------------------------- |
+| projection doc / embedded model  | `@freezed` class with `fromJson`/`toJson` (`style: freezed`, default) or a plain immutable class with hand-written `fromJson`/`toJson` (`style: plain`) |
+| enum                             | `enum` with the stored value (`value`); `@JsonValue` per value under freezed, `fromJson`/`toJson` under plain. Values become lowerCamelCase (`IN_REVIEW` → `inReview`, `key:` overrides honored) |
+| `string`/`id`, `int`/`int64`, `float`, `boolean` | `String`, `int`, `double`, `bool`                     |
+| `timestamp` / `date`             | `DateTime`, converted from/to Firestore `Timestamp` (`TimestampConverter` / `timestampFromJson` — also accepts ISO strings, epoch millis and `{_seconds, _nanoseconds}`) |
+| `json`                           | `Object?`                                                            |
+| `list: true`                     | `List<T>`                                                            |
+| `nullable` / `optional`          | `T?`; an `optional` (non-nullable) field is **omitted** on write instead of written as `null` (`includeIfNull: false`) |
+| `default`                        | `@Default(…)` / constructor default (scalar, enum and list defaults)  |
+| relation                         | the resolved foreign-key id (`owner` → `String ownerId`)             |
+| `extends` fragments              | fields spliced in; non-identifier keys are renamed (`_meta_` → `meta` with `@JsonKey(name: '_meta_')`) |
+| `collection`                     | `<Doc>Path` helpers: `template`, `collection(…)` and, for document paths, `doc(…)` |
+
+```dart
+/// Firestore: `shops/{shopId}`
+@freezed
+abstract class Shop with _$Shop {
+  @JsonSerializable(explicitToJson: true)
+  const factory Shop({
+    required String name,
+    required String ownerId,
+    required ProductStatus status,
+    @TimestampConverter() required DateTime createdAt,
+    @TimestampConverter() DateTime? updatedAt,
+    @JsonKey(name: '_meta_') required Meta meta,
+  }) = _Shop;
+
+  factory Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
+}
+
+abstract final class ShopPath {
+  static const String template = 'shops/{shopId}';
+  static String collection() => 'shops';
+  static String doc({required String shopId}) => 'shops/$shopId';
+}
+```
+
+- **freezed style** needs `freezed_annotation` + `json_annotation`
+  (dependencies) and `freezed` + `json_serializable` + `build_runner`
+  (dev dependencies); run `dart run build_runner build` after generating.
+  Both styles import `package:cloud_firestore` for `Timestamp` when a
+  `timestamp`/`date` field exists.
+- `split: true` writes one snake_case file per type, `timestamp_converter.dart`,
+  and a `contracts.dart` barrel (renamable via `file`).
+- All emitted types (enums, value objects, projections, `<Doc>Path` helpers)
+  share one Dart namespace: a collision, a Dart keyword, or a name shadowing a
+  core type (`DateTime`, `Map`, …) fails generation (`GENERATOR_FAILED`) —
+  rename with `fsName` or the projection key.
+- A `nullable` field with a `default` keeps an explicit `null`; the default
+  applies only when the key is absent (freezed uses `@JsonKey(readValue: …)`).
+- Discriminated `unions:` are not emitted yet; their variant models are, when a
+  projection references them.
+- The generated code is checked with `dart analyze --fatal-infos`
+  (`package:lints/recommended`) and a JSON round trip in CI
+  (`packages/firebase-contract/dart-check`, `nx run firebase-contract:dart-check`).
+
 ## Discriminated unions
 
 ```yaml
@@ -671,6 +742,7 @@ project:
 | `id-codecs`              | document | `id-codecs.ts` (+ `id-core.ts`) | typed per-entity id encode/decode wrappers; emits the Sqids primitives when `project.idCodec` is set |
 | `unions`                 | document | `unions.ts`                   | Zod discriminated unions + TS union types              |
 | `config`                 | document | `dataconnect.yaml`, `connector.yaml`, `constants.ts` | DC configs + sync constants (preview — see [Project config](#project-config)) |
+| `dart`                   | document | `contracts.dart`; `split: true` → `<type>.dart` per type + `contracts.dart` barrel | Dart (Flutter) models for the Firestore projections — freezed (default) or plain classes; see [Dart (Flutter) models](#dart-flutter-models) |
 
 Each generator emits nothing when its section is absent, so a small contract
 produces a small output. Select a subset with `-g`.

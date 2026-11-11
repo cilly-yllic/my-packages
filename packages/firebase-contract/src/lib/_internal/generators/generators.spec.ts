@@ -153,6 +153,7 @@ describe('default registry', () => {
       'id-codecs',
       'unions',
       'config',
+      'dart',
     ])
   })
 })

@@ -7,7 +7,24 @@
   "// targets": "to see all targets run: nx show project firebase-contract --web",
   "targets": {
     "replace-aliases": {},
-    "output": { "executor": "builder:output" },
-    "generator": { "executor": "nx:noop" }
+    "output": {
+      "executor": "builder:output"
+    },
+    "generator": {
+      "executor": "nx:noop"
+    },
+    "dart-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/firebase-contract/dart-check",
+        "commands": [
+          "dart pub get --enforce-lockfile",
+          "dart run build_runner build",
+          "dart analyze --fatal-infos",
+          "dart run bin/roundtrip.dart"
+        ],
+        "parallel": false
+      }
+    }
   }
 }

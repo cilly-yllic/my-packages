@@ -10,7 +10,7 @@ import { createFsLoader, ModuleLoader } from '../resolver/module-loader.js'
 import { graphqlNameCollisions } from '../validation/rules.js'
 import { validateIr } from '../validation/validate.js'
 import { createDefaultRegistry } from '../generators/index.js'
-import { GeneratedFile, GeneratorContext } from '../generators/generator.js'
+import { GeneratedFile, Generator, GeneratorContext } from '../generators/generator.js'
 import { toHeaderComment } from '../generators/support/header.js'
 import { GeneratorOutputSettings } from '../generators/generator.js'
 import { API_PLACEHOLDER_RE, expandApiPlaceholders } from '../generators/support/templates.js'
@@ -195,6 +195,38 @@ const deriveTypesImport = (outDir: string, doc: RawContract, rootDoc: RawContrac
  *   entry `generators:`, entry wins; no file-level tier by design)
  * - document-scoped generators run once per yml that declares them
  */
+/**
+ * Check `options` against a generator's declared `optionValues` (when it has
+ * any): unknown keys and out-of-vocabulary values are errors, never silently
+ * ignored. Returns false when a diagnostic was pushed.
+ */
+const checkGeneratorOptions = (
+  generator: Generator,
+  options: Record<string, string> | undefined,
+  source: string,
+  diagnostics: Diagnostic[]
+): boolean => {
+  const allowed = generator.optionValues
+  if (!allowed || !options) return true
+  let ok = true
+  for (const [key, value] of Object.entries(options)) {
+    // Own keys only: `constructor` / `toString` must not resolve to Object.prototype members.
+    const values = Object.hasOwn(allowed, key) ? allowed[key] : undefined
+    if (!values) {
+      diagnostics.push(
+        error('UNKNOWN_KEY', `Unknown option "${key}" for generator "${generator.name}" (expected ${Object.keys(allowed).join(', ')}) (${source})`)
+      )
+      ok = false
+    } else if (!values.includes(value)) {
+      diagnostics.push(
+        error('INVALID_VALUE', `Invalid value "${value}" for option "${key}" of generator "${generator.name}" (expected ${values.join(' | ')}) (${source})`)
+      )
+      ok = false
+    }
+  }
+  return ok
+}
+
 const buildGeneratorJobs = (
   doc: RawContract,
   rootDoc: RawContract,
@@ -257,6 +289,7 @@ const buildGeneratorJobs = (
         const derived = deriveTypesImport(outDir, doc, rootDoc)
         if (derived !== undefined) options = { ...(options ?? {}), typesImport: derived }
       }
+      if (generator && !checkGeneratorOptions(generator, options, doc.filePath, diagnostics)) continue
       if (options !== undefined) output.options = options
       const key = [use.generator, outDir, file ?? '', String(split ?? ''), JSON.stringify(options ?? null), header ?? '\u0001'].join('\u0000')
       const existing = grouped.get(key)
@@ -302,6 +335,7 @@ const buildGeneratorJobs = (
       }
       output.file = decl.file
     }
+    if (!checkGeneratorOptions(generator, decl.options, doc.filePath, diagnostics)) continue
     if (decl.options !== undefined) output.options = decl.options
     const expanded = expandOutTemplate(decl.out, undefined, diagnostics, doc.filePath)
     if (expanded === undefined) continue
@@ -496,7 +530,19 @@ export const generate = (entryPath: string, options: GenerateOptions): GenerateR
       collected.push(error('UNKNOWN_GENERATOR', `Unknown generator "${name}"`))
       continue
     }
-    for (const file of generator.generate(ir, context)) {
+    // A generator that cannot express the contract throws; surface it as a
+    // diagnostic instead of crashing the whole run.
+    let generated: GeneratedFile[]
+    try {
+      generated = generator.generate(ir, context)
+    } catch (cause) {
+      // Keep the error class for unexpected defects (TypeError etc.); plain Errors are contract rejections.
+      const message =
+        cause instanceof Error ? (cause.name === 'Error' ? cause.message : `${cause.name}: ${cause.message}`) : String(cause)
+      collected.push(error('GENERATOR_FAILED', `Generator "${name}" failed: ${message}`))
+      continue
+    }
+    for (const file of generated) {
       files.push({ path: join(options.outDir, file.path), content: file.content })
     }
   }

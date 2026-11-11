@@ -52,3 +52,20 @@ jobs:
       # - run: npx nx-cloud record -- echo Hello World
       # Nx Affected runs only tasks affected by the changes in this PR/commit. Learn more: https://nx.dev/ci/features/affected
       - run: npx nx affected -t lint test build
+
+  # firebase-contract の dart generator 生成物（dart-check/lib/gen、vitest のファイルスナップショット）を
+  # build_runner + dart analyze で検証する
+  dart:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/firebase-contract/dart-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          sdk: 3.13.7
+      - run: dart pub get --enforce-lockfile
+      - run: dart run build_runner build
+      - run: dart analyze --fatal-infos
+      - run: dart run bin/roundtrip.dart

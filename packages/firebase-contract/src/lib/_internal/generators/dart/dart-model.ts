@@ -9,7 +9,7 @@ import { isRelation, relationFkName } from '../support/relations.js'
 import { collectDeps } from '../support/split.js'
 
 /** Dart reserved words / built-in identifiers that cannot name a field or enum value. */
-const DART_RESERVED = new Set([
+export const DART_KEYWORDS = new Set([
   'abstract',
   'as',
   'assert',
@@ -101,7 +101,7 @@ export const dartIdentifier = (raw: string, reserved: Set<string> = FIELD_RESERV
   let name = /^[a-z][A-Za-z0-9]*$/.test(raw) ? raw : camelCase(raw.replace(/[^A-Za-z0-9_\-\s]/g, ' '))
   if (name === '') name = 'value'
   if (/^[0-9]/.test(name)) name = `v${name}`
-  if (DART_RESERVED.has(name) || reserved.has(name)) name = `${name}Value`
+  if (DART_KEYWORDS.has(name) || reserved.has(name)) name = `${name}Value`
   return name
 }
 

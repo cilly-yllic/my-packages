@@ -3,7 +3,7 @@ import { GeneratedFile, Generator, GeneratorContext } from '../generator.js'
 import { headerBlocks } from '../support/header.js'
 import { snakeCase } from '../support/naming.js'
 import { outputFile } from '../support/templates.js'
-import { buildDartContract, DartClass, DartContract, DartEnum } from './dart-model.js'
+import { buildDartContract, DART_KEYWORDS, DartClass, DartContract, DartEnum } from './dart-model.js'
 import {
   DART_STYLES,
   DartStyle,
@@ -46,6 +46,68 @@ const renderDoc = (dartClass: DartClass, style: DartStyle, enums: Map<string, Da
   return [renderClass(dartClass, style, enums), ...(helpers ? [helpers] : [])]
 }
 
+/** Dart core / annotation / generated-support type names a contract type must not shadow. */
+const RESERVED_TYPE_NAMES = new Set([
+  'Object',
+  'String',
+  'int',
+  'double',
+  'num',
+  'bool',
+  'List',
+  'Map',
+  'Set',
+  'Iterable',
+  'DateTime',
+  'Duration',
+  'Type',
+  'Function',
+  'Null',
+  'Never',
+  'Record',
+  'Enum',
+  'Timestamp',
+  'Default',
+  'JsonKey',
+  'JsonValue',
+  'JsonSerializable',
+  'JsonConverter',
+  'TimestampConverter',
+])
+
+/**
+ * Every emitted Dart type (enums, value objects, projections, `<Doc>Path`
+ * helpers) shares one library namespace: reject names that are not valid
+ * public Dart type identifiers, shadow core/support types, or collide.
+ */
+const assertTypeNames = (contract: DartContract): void => {
+  const owners = new Map<string, string[]>()
+  const claim = (name: string, owner: string): void => {
+    owners.set(name, [...(owners.get(name) ?? []), owner])
+  }
+  for (const dartEnum of contract.enums) claim(dartEnum.name, `enum ${dartEnum.name}`)
+  for (const model of contract.models) claim(model.name, `model ${model.name}`)
+  for (const doc of contract.docs) {
+    claim(doc.name, `firestore ${doc.name}`)
+    if (renderPathHelpers(doc) !== undefined) claim(`${doc.name}Path`, `path helper of firestore ${doc.name}`)
+  }
+  const problems: string[] = []
+  for (const [name, claimed] of owners) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name) || DART_KEYWORDS.has(name)) {
+      problems.push(`"${name}" (${claimed.join(', ')}) is not a valid Dart type name`)
+    } else if (RESERVED_TYPE_NAMES.has(name)) {
+      problems.push(`"${name}" (${claimed.join(', ')}) shadows a Dart core/support type`)
+    } else if (claimed.length > 1) {
+      problems.push(`"${name}" is emitted by ${claimed.join(' and ')}`)
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(
+      `dart generator: conflicting type names — ${problems.join('; ')}. Rename via fsName or the projection key.`
+    )
+  }
+}
+
 const isEmpty = (contract: DartContract): boolean =>
   contract.docs.length === 0 && contract.models.length === 0 && contract.enums.length === 0
 
@@ -53,6 +115,7 @@ const isEmpty = (contract: DartContract): boolean =>
 const generateSingle = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => {
   const contract = buildDartContract(ir)
   if (isEmpty(contract)) return []
+  assertTypeNames(contract)
   const style = styleOf(context)
   const enums = enumMap(contract)
   const classes = classesOf(contract)
@@ -96,15 +159,22 @@ const assignFileNames = (names: string[], reserved: string[]): Map<string, strin
 const generateSplit = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => {
   const contract = buildDartContract(ir)
   if (isEmpty(contract)) return []
+  assertTypeNames(contract)
   const style = styleOf(context)
   const enums = enumMap(contract)
   const classes = classesOf(contract)
   const barrel = outputFile(context, DEFAULT_FILE)
-  const barrelName = barrel.split('/').pop() ?? barrel
+  if (barrel === TIMESTAMP_FILE || barrel.split('/').includes('..')) {
+    throw new Error(
+      `dart generator: barrel file "${barrel}" must not be ${TIMESTAMP_FILE} or leave the output directory`
+    )
+  }
+  // Type files sit at the output root; the barrel may live in a subdirectory.
   const fileOf = assignFileNames(
     [...contract.enums.map(e => e.name), ...classes.map(c => c.name)],
-    [barrelName, TIMESTAMP_FILE]
+    [barrel, TIMESTAMP_FILE]
   )
+  const toRoot = '../'.repeat(barrel.split('/').length - 1)
   const files: GeneratedFile[] = []
   const header = headerBlocks(context)
   const timestamps = classes.some(classUsesDateTime)
@@ -150,7 +220,9 @@ const generateSplit = (ir: Ir, context?: GeneratorContext): GeneratedFile[] => {
     files.push({ path: file, content: `${blocks.join('\n\n')}\n` })
   }
 
-  const exports = [...(timestamps ? [TIMESTAMP_FILE] : []), ...fileOf.values()].sort().map(path => `export '${path}';`)
+  const exports = [...(timestamps ? [TIMESTAMP_FILE] : []), ...fileOf.values()]
+    .sort()
+    .map(path => `export '${toRoot}${path}';`)
   files.push({ path: barrel, content: `${[...header, exports.join('\n')].join('\n\n')}\n` })
   return files
 }

@@ -26,10 +26,14 @@ abstract class Product with _$Product {
     @JsonKey(includeIfNull: false) String? note,
     bool? archived,
     @JsonKey(name: 'default', includeIfNull: false) String? defaultValue,
+    @JsonKey(readValue: _readProductFallback) String? fallback,
   }) = _Product;
 
   factory Product.fromJson(Map<String, dynamic> json) => _$ProductFromJson(json);
 }
+
+Object? _readProductFallback(Map<dynamic, dynamic> json, String key) =>
+    json.containsKey(key) ? json[key] : 'none';
 
 /// Firestore path helpers for [Product].
 abstract final class ProductPath {

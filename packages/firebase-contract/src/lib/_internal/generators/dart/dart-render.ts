@@ -178,6 +178,7 @@ const classDoc = (dartClass: DartClass): string[] => {
 
 const renderFreezedClass = (dartClass: DartClass, enums: Map<string, DartEnum>): string => {
   const { name } = dartClass
+  const readers: string[] = []
   const lines = [...classDoc(dartClass), '@freezed', `abstract class ${name} with _$${name} {`]
   lines.push('  @JsonSerializable(explicitToJson: true)')
   if (dartClass.fields.length === 0) {
@@ -190,10 +191,20 @@ const renderFreezedClass = (dartClass: DartClass, enums: Map<string, DartEnum>):
       const keyArgs: string[] = []
       if (field.key !== field.name) keyArgs.push(`name: ${dartString(field.key)}`)
       if (field.omitIfNull) keyArgs.push('includeIfNull: false')
-      if (keyArgs.length > 0) annotations.push(`@JsonKey(${keyArgs.join(', ')})`)
       if (usesDateTime(field)) annotations.push('@TimestampConverter()')
       const fallback = defaultLiteral(field, enums)
-      if (fallback !== undefined) annotations.push(`@Default(${fallback})`)
+      // json_serializable applies `@Default` with `??`, which would turn an explicit
+      // null into the default. For nullable fields the default is applied only to an
+      // absent key (like plain output and the TS `.default().nullable()` schema).
+      const absentOnly = fallback !== undefined && field.nullable
+      if (absentOnly) {
+        const reader = readerName(name, field)
+        keyArgs.push(`readValue: ${reader}`)
+        readers.push(
+          `Object? ${reader}(Map<dynamic, dynamic> json, String key) =>\n    json.containsKey(key) ? json[key] : ${jsonLiteral(field.default)};`
+        )
+      } else if (fallback !== undefined) annotations.push(`@Default(${fallback})`)
+      if (keyArgs.length > 0) annotations.unshift(`@JsonKey(${keyArgs.join(', ')})`)
       const required = fallback === undefined && !field.nullable ? 'required ' : ''
       const prefix = annotations.length > 0 ? `${annotations.join(' ')} ` : ''
       lines.push(`    ${prefix}${required}${fieldType(field)} ${field.name},`)
@@ -201,7 +212,23 @@ const renderFreezedClass = (dartClass: DartClass, enums: Map<string, DartEnum>):
     lines.push(`  }) = _${name};`)
   }
   lines.push('', `  factory ${name}.fromJson(Map<String, dynamic> json) => _$${name}FromJson(json);`, '}')
-  return lines.join('\n')
+  return [lines.join('\n'), ...readers].join('\n\n')
+}
+
+/** Private top-level `readValue` function name for a field (`_readProductNote`). */
+const readerName = (className: string, field: DartField): string =>
+  `_read${className}${field.name.charAt(0).toUpperCase()}${field.name.slice(1)}`
+
+/** Raw JSON value as a Dart literal (what the key would hold in the document). */
+const jsonLiteral = (value: unknown): string => {
+  if (value === null || value === undefined) return 'null'
+  if (typeof value === 'string') return dartString(value)
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return `<Object?>[${value.map(jsonLiteral).join(', ')}]`
+  const entries = Object.entries(value as Record<string, unknown>).map(
+    ([k, v]) => `${dartString(k)}: ${jsonLiteral(v)}`
+  )
+  return `<String, Object?>{${entries.join(', ')}}`
 }
 
 /** Decode expression for a non-list value `source` (non-null result unless `nullable`). */

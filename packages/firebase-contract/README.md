@@ -638,6 +638,12 @@ abstract final class ShopPath {
   `timestamp`/`date` field exists.
 - `split: true` writes one snake_case file per type, `timestamp_converter.dart`,
   and a `contracts.dart` barrel (renamable via `file`).
+- All emitted types (enums, value objects, projections, `<Doc>Path` helpers)
+  share one Dart namespace: a collision, a Dart keyword, or a name shadowing a
+  core type (`DateTime`, `Map`, …) fails generation (`GENERATOR_FAILED`) —
+  rename with `fsName` or the projection key.
+- A `nullable` field with a `default` keeps an explicit `null`; the default
+  applies only when the key is absent (freezed uses `@JsonKey(readValue: …)`).
 - Discriminated `unions:` are not emitted yet; their variant models are, when a
   projection references them.
 - The generated code is checked with `dart analyze --fatal-infos`

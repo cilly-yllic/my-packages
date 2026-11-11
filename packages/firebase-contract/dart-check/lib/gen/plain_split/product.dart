@@ -16,6 +16,7 @@ class Product {
     this.note,
     this.archived,
     this.defaultValue,
+    this.fallback = 'none',
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -30,6 +31,7 @@ class Product {
         note: json['note'] as String?,
         archived: json['archived'] as bool?,
         defaultValue: json['default'] as String?,
+        fallback: json.containsKey('fallback') ? json['fallback'] as String? : 'none',
       );
 
   final String shopId;
@@ -55,6 +57,8 @@ class Product {
 
   final String? defaultValue;
 
+  final String? fallback;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'shopId': shopId,
         'title': title,
@@ -67,6 +71,7 @@ class Product {
         if (note != null) 'note': note,
         'archived': archived,
         if (defaultValue != null) 'default': defaultValue,
+        'fallback': fallback,
       };
 }
 

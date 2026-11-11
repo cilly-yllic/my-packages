@@ -210,7 +210,8 @@ const checkGeneratorOptions = (
   if (!allowed || !options) return true
   let ok = true
   for (const [key, value] of Object.entries(options)) {
-    const values = allowed[key]
+    // Own keys only: `constructor` / `toString` must not resolve to Object.prototype members.
+    const values = Object.hasOwn(allowed, key) ? allowed[key] : undefined
     if (!values) {
       diagnostics.push(
         error('UNKNOWN_KEY', `Unknown option "${key}" for generator "${generator.name}" (expected ${Object.keys(allowed).join(', ')}) (${source})`)
@@ -529,7 +530,17 @@ export const generate = (entryPath: string, options: GenerateOptions): GenerateR
       collected.push(error('UNKNOWN_GENERATOR', `Unknown generator "${name}"`))
       continue
     }
-    for (const file of generator.generate(ir, context)) {
+    // A generator that cannot express the contract throws; surface it as a
+    // diagnostic instead of crashing the whole run.
+    let generated: GeneratedFile[]
+    try {
+      generated = generator.generate(ir, context)
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause)
+      collected.push(error('GENERATOR_FAILED', `Generator "${name}" failed: ${message}`))
+      continue
+    }
+    for (const file of generated) {
       files.push({ path: join(options.outDir, file.path), content: file.content })
     }
   }

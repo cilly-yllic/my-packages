@@ -16,6 +16,7 @@ Map<String, dynamic> productJson() => <String, dynamic>{
       'publishedAts': <Object>[Timestamp(1700000000, 0), '2024-01-02T03:04:05.000Z'],
       'archived': null,
       'default': 'x',
+      'fallback': null,
     };
 
 void verify(Map<String, dynamic> out) {
@@ -24,6 +25,7 @@ void verify(Map<String, dynamic> out) {
   check(out.containsKey('archived') && out['archived'] == null, 'nullable is written as null');
   check(!out.containsKey('note'), 'absent optional is omitted');
   check(out['default'] == 'x', 'renamed key keeps the Firestore name');
+  check(out.containsKey('fallback') && out['fallback'] == null, 'explicit null is not replaced by the default');
   check((out['publishedAts'] as List).every((e) => e is Timestamp), 'DateTime is written as Timestamp');
   check((out['dimensions'] as Map)['unit'] == 'cm', 'nested default + explicitToJson');
 }
@@ -36,6 +38,10 @@ void main() {
   final plain = pl.Product.fromJson(productJson());
   check(plain.publishedAts[1].toUtc().year == 2024, 'ISO string decoded');
   verify(plain.toJson());
+
+  final absent = productJson()..remove('fallback');
+  check(fz.Product.fromJson(absent).fallback == 'none', 'absent key takes the default (freezed)');
+  check(pl.Product.fromJson(absent).fallback == 'none', 'absent key takes the default (plain)');
 
   check(fz.ShopPath.doc(shopId: 'a') == 'shops/a', 'path helper');
   check(pl.ProductPath.collection(shopId: 'a') == 'shops/a/products', 'path helper');

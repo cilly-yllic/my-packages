@@ -88,6 +88,7 @@ firestore:
       note: { type: string, optional: true, description: absent when unset }
       archived: { type: boolean, nullable: true }
       default: { type: string, optional: true }
+      fallback: { type: string, nullable: true, default: none }
   AuditLog:
     collection: audit_logs
     fields:
@@ -222,6 +223,89 @@ describe('dart generator', () => {
   })
 })
 
+describe('dart generator review regressions', () => {
+  const contract = (body: string): string => `
+models:
+  User:
+    fields:
+      id: { type: id, id: true }
+      name: string
+${body}`
+
+  it('keeps explicit null for nullable fields with a default (freezed readValue)', () => {
+    const content = generate(false)[0].content
+    expect(content).toContain('    @JsonKey(readValue: _readProductFallback) String? fallback,')
+    expect(content).toContain(
+      "Object? _readProductFallback(Map<dynamic, dynamic> json, String key) =>\n    json.containsKey(key) ? json[key] : 'none';"
+    )
+    expect(content).not.toContain("@Default('none')")
+    expect(generate(false, 'plain')[0].content).toContain(
+      "        fallback: json.containsKey('fallback') ? json['fallback'] as String? : 'none',"
+    )
+  })
+
+  it('rejects an embedded model and a projection that share a Dart type name', () => {
+    const body = `
+firestore:
+  User:
+    from: User
+    pick: [name]
+  Order:
+    fields:
+      buyer: { type: User }
+`
+    expect(() => generate(false, undefined, contract(body))).toThrow(
+      /"User" is emitted by model User and firestore User/
+    )
+    expect(() => generate(true, undefined, contract(body))).toThrow(/"User" is emitted by/)
+  })
+
+  it('rejects a type that collides with a generated <Doc>Path helper', () => {
+    const body = `
+firestore:
+  A:
+    collection: a/{id}
+    fields:
+      x: string
+  APath:
+    fields:
+      y: string
+`
+    expect(() => generate(false, undefined, contract(body))).toThrow(
+      /"APath" is emitted by path helper of firestore A and firestore APath/
+    )
+  })
+
+  it('rejects type names that are Dart keywords or shadow core types', () => {
+    const body = (name: string): string => `
+firestore:
+  ${name}:
+    fields:
+      x: string
+`
+    expect(() => generate(false, undefined, contract(body('class')))).toThrow(
+      /"class" .* is not a valid Dart type name/
+    )
+    expect(() => generate(false, undefined, contract(body('DateTime')))).toThrow(/shadows a Dart core\/support type/)
+  })
+
+  it('exports from a nested barrel relative to the output root', () => {
+    const { ir } = buildIr([parseContract(CONTRACT, '/c.yml')])
+    const files = createDartGenerator().generate(ir, { output: { split: true, file: 'sub/contracts.dart' } })
+    const barrel = files.find(f => f.path === 'sub/contracts.dart')?.content ?? ''
+    expect(barrel).toContain("export '../shop.dart';")
+    expect(barrel).toContain("export '../timestamp_converter.dart';")
+    expect(files.some(f => f.path === 'shop.dart')).toBe(true)
+  })
+
+  it('refuses a barrel named like the timestamp helper file', () => {
+    const { ir } = buildIr([parseContract(CONTRACT, '/c.yml')])
+    expect(() =>
+      createDartGenerator().generate(ir, { output: { split: true, file: 'timestamp_converter.dart' } })
+    ).toThrow(/must not be timestamp_converter.dart/)
+  })
+})
+
 describe('dart generator declaration', () => {
   const run = (options: string) =>
     generateAll('/proj/contract.yml', {
@@ -254,6 +338,31 @@ firestore:
     const result = run(', options: { style: frozen }')
     expect(result.ok).toBe(false)
     expect(result.diagnostics.some(d => d.code === 'INVALID_VALUE' && d.message.includes('frozen'))).toBe(true)
+  })
+
+  it('rejects prototype-named option keys as unknown (no crash)', () => {
+    for (const key of ['constructor', 'toString']) {
+      const result = run(`, options: { ${key}: plain }`)
+      expect(result.ok).toBe(false)
+      expect(result.diagnostics.some(d => d.code === 'UNKNOWN_KEY' && d.message.includes(key))).toBe(true)
+    }
+  })
+
+  it('reports a generator failure as a diagnostic instead of throwing', () => {
+    const result = generateAll('/proj/contract.yml', {
+      loader: createMemoryLoader({
+        '/proj/contract.yml': `
+generators:
+  - { generator: dart, out: lib/gen }
+firestore:
+  class:
+    fields:
+      x: string
+`,
+      }),
+    })
+    expect(result.ok).toBe(false)
+    expect(result.diagnostics.some(d => d.code === 'GENERATOR_FAILED' && d.message.includes('dart'))).toBe(true)
   })
 
   it('rejects an unknown option key', () => {

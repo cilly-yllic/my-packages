@@ -1,6 +1,6 @@
 {
   "name": "firebase-contract",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "bin": {
     "firebase-contract": "./dist/lib/cli/index.js",
@@ -19,7 +19,9 @@
     "zod",
     "data-connect",
     "firestore",
-    "schema"
+    "schema",
+    "dart",
+    "flutter"
   ],
   "author": "cilly",
   "license": "MIT",

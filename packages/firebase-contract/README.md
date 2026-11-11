@@ -11,6 +11,8 @@ From one contract, generate:
 - **Data Connect** GraphQL schema (`@table`, keys, directives), query/mutation
   operations (routed per connector), and `Any`↔logical adapters
 - **Firestore** projection schemas (denormalized read model; shared field groups via fragments)
+- **Dart (Flutter)** models for the Firestore projections (freezed or plain classes,
+  `Timestamp` ⇄ `DateTime`, collection path helpers)
 - **API** request/response types, request-validation Zod, and class-validator DTOs
 - **Cloud Task / Pub/Sub** payload envelopes + delivery constants
 - **SQL migrations** for constraints Data Connect can't express (composite FKs,

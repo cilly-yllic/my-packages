@@ -1,0 +1,9 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        generate_for:
+          - lib/gen/freezed_*/**
+      freezed:
+        generate_for:
+          - lib/gen/freezed_*/**

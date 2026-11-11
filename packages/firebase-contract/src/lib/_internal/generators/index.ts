@@ -3,6 +3,7 @@ import { createApiTypesGenerator } from './api/api-types-generator.js'
 import { createApiValidationGenerator } from './api/api-validation-generator.js'
 import { createTaskPayloadGenerator } from './api/task-payload-generator.js'
 import { createConfigGenerator } from './config/config-generator.js'
+import { createDartGenerator } from './dart/dart-generator.js'
 import { createDataConnectAdapterGenerator } from './data-connect/adapter-generator.js'
 import { createDataConnectGraphqlGenerator } from './data-connect/graphql-generator.js'
 import { createDataConnectOperationsGenerator } from './data-connect/operations-generator.js'
@@ -35,11 +36,12 @@ export { createIdCodecGenerator } from './id/id-codec-generator.js'
 export type { IdCodecGeneratorOptions } from './id/id-codec-generator.js'
 export { createUnionGenerator } from './union/union-generator.js'
 export { createConfigGenerator } from './config/config-generator.js'
+export { createDartGenerator } from './dart/dart-generator.js'
 
 /**
  * Build a registry populated with the built-in generators:
  * TypeScript, Zod, Data Connect (GraphQL schema / operations / adapter),
- * Firestore types, and the API layer (types / request validation).
+ * Firestore types, the API layer (types / request validation), and Dart models.
  */
 export const createDefaultRegistry = (): GeneratorRegistry =>
   new GeneratorRegistry()
@@ -58,3 +60,4 @@ export const createDefaultRegistry = (): GeneratorRegistry =>
     .register(createIdCodecGenerator())
     .register(createUnionGenerator())
     .register(createConfigGenerator())
+    .register(createDartGenerator())

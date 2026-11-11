@@ -51,6 +51,8 @@ packages/*/*/
 !packages/*/src/
 !packages/*/src/**/package.json
 !packages/*/src/**/*
+# firebase-contract の dart generator 生成物を dart analyze で検証するパッケージ
+!packages/firebase-contract/dart-check/
 
 firestore-debug.log
 .claude/worktrees

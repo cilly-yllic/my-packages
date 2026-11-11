@@ -1,0 +1,6 @@
+# cloud_firestore の Timestamp だけを再現したスタブ（dart-check 専用）。
+name: cloud_firestore
+publish_to: none
+
+environment:
+  sdk: ^3.13.0

@@ -53,6 +53,12 @@ export interface Generator {
   readonly defaultOutput?: { file: string; split: boolean }
   /** Document scope: true when `split: true` switches to a per-item file layout. */
   readonly splittable?: boolean
+  /**
+   * Allowed `options` keys and their values. When declared, the compiler
+   * rejects unknown keys (`UNKNOWN_KEY`) and out-of-vocabulary values
+   * (`INVALID_VALUE`); without it `options` stays free-form.
+   */
+  readonly optionValues?: Readonly<Record<string, readonly string[]>>
   generate(ir: Ir, context?: GeneratorContext): GeneratedFile[]
 }
 
